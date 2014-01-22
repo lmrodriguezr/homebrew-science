@@ -17,6 +17,9 @@ class Velvet < Formula
     if ENV['MAXKMERLENGTH']
       args << ("MAXKMERLENGTH=" + ENV['MAXKMERLENGTH'])
     end
+    if ENV['CATEGORIES']
+      args << ("CATEGORIES=" + ENV['CATEGORIES'])
+    end
 
     system "make", "velveth", "velvetg", *args
     bin.install 'velveth', 'velvetg'
@@ -29,6 +32,10 @@ class Velvet < Formula
     <<-EOS.undent
       If you want to build with a different kmer length, you can set
       MAXKMERLENGTH=X to a value (X) *before* you brew this formula.
+      
+      If you want to build with support for multiple categories, you
+      can set CATEGORIES=Y to a value (Y) *before* you brew this
+      formula.
 
       Some additional user contributed scripts are installed here:
       #{share}/velvet/contrib
