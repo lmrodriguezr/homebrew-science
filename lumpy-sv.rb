@@ -1,42 +1,33 @@
-require 'formula'
-
 class LumpySv < Formula
-  homepage 'https://github.com/arq5x/lumpy-sv'
-  url 'https://github.com/arq5x/lumpy-sv/archive/v0.1.5.tar.gz'
-  sha1 '650c4984ff80c6d60bcd4b5e86f4789e2e898fe7'
+  homepage "https://github.com/arq5x/lumpy-sv"
+  # doi "10.1186/gb-2014-15-6-r84"
+  # tag "bioinformatics"
+  url "https://github.com/arq5x/lumpy-sv/releases/download/0.2.9/lumpy-sv-0.2.9.tar.gz"
+  sha1 "3ca24aed2b5a57a5e8a55f2f65057520474fb77c"
 
-  depends_on 'gsl'
-  depends_on 'bamtools'
-  depends_on 'samtools' => :recommended
-  depends_on 'bedtools' => :recommended
-  depends_on 'bwa' => :optional
-  depends_on 'novoalign' => :optional
-  depends_on 'yaha' => :optional
-  depends_on 'Statistics::Descriptive' => [:perl, :optional]
-
-  def patches
-    # Ensure path to GNU Scientific Library points to homebrew prefix
-    DATA
+  bottle do
+    root_url "https://downloads.sf.net/project/machomebrew/Bottles/science"
+    cellar :any
+    sha1 "76b8040a6bb5586829cee50723ada9b0a08c95db" => :yosemite
+    sha1 "347569ef2f558c13cc860857113e287ed046fb31" => :mavericks
+    sha1 "9a951d727f67fc9a315d26a260d0ad4f1b69cd6f" => :mountain_lion
   end
 
+  depends_on "bamtools" => :recommended
+  depends_on "samtools" => :recommended
+  depends_on "bedtools" => :recommended
+  depends_on "bwa" => :optional
+  depends_on "novoalign" => :optional
+  depends_on "yaha" => :optional
+
   def install
-    system 'make'
-    bin.install 'bin/lumpy'
-    (share/'lumpy-sv').install Dir['scripts/*']
+    ENV.deparallelize
+    system "make"
+    bin.install "bin/lumpy"
+    (share/"lumpy-sv").install Dir["scripts/*"]
   end
 
   test do
-    system 'lumpy 2>&1 |grep -q structural'
+    system "#{bin}/lumpy 2>&1 |grep -q structural"
   end
 end
-__END__
---- a/defs.local
-+++ b/defs.local
-@@ -1,5 +1,4 @@
- #GSL_INCLUDE=-I/home/rl6sf/src/gsl/gsl
- #GSL_LINK=-L/home/rl6sf/src/gsl
--GSL_INCLUDE=-I/usr/local/include\
--            -I/usr/local/include/gsl
--GSL_LINK=-L/usr/local/lib
-+GSL_INCLUDE=-IHOMEBREW_PREFIX/include -IHOMEBREW_PREFIX/include/gsl
-+GSL_LINK=-LHOMEBREW_PREFIX/lib

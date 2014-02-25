@@ -1,87 +1,88 @@
-require 'formula'
-
 class Pymol < Formula
-  homepage 'http://pymol.org'
-  url 'http://downloads.sourceforge.net/project/pymol/pymol/1.7/pymol-v1.7.0.0.tar.bz2'
-  sha1 'b663c3779fc50a709adb8bfd8c275a7e44c4b54d'
-  head 'https://pymol.svn.sourceforge.net/svnroot/pymol/trunk/pymol'
+  homepage "http://pymol.org"
+  url "https://downloads.sourceforge.net/project/pymol/pymol/1.7/pymol-v1.7.4.0.tar.bz2"
+  sha1 "8e091a0ed6a3d7389f10021a77b0d217b6c36331"
+  head "https://svn.code.sf.net/p/pymol/code/trunk/pymol"
+  revision 1
 
+  bottle do
+    root_url "https://homebrew.bintray.com/bottles-science"
+    cellar :any
+    sha256 "b87a054a59855d81fa79c6bdaaed196c2b5d177491090f706ca7c3d570906b84" => :yosemite
+    sha256 "cc66758469a6635ac66142ccfc285ff679efa5a3a0b13bfcb671f7342a4c5233" => :mavericks
+    sha256 "d94bb41550f2b57786cc4b563b13ec48073f98c925c3baf38f2b9b02fa4267e4" => :mountain_lion
+  end
+
+  depends_on "homebrew/dupes/tcl-tk" => ["with-threads", "with-x11"]
   depends_on "glew"
-  depends_on 'Pmw'
-  depends_on 'python' => 'with-brewed-tk'
-  depends_on 'homebrew/dupes/tcl-tk' => ['enable-threads','with-x11']
-  depends_on :freetype
-  depends_on :libpng
+  depends_on "python" => "with-tcl-tk"
+  depends_on "freetype"
+  depends_on "libpng"
   depends_on :x11
 
-  # To use external GUI tk must be built with --enable-threads
-  # and python must be setup to use that version of tk with --with-brewed-tk
-  depends_on 'Tkinter' => :python
+  resource "pmw" do
+    url "https://downloads.sourceforge.net/project/pmw/Pmw/Pmw.1.3.3/Pmw.1.3.3.tar.gz"
+    sha1 "0ff7f03245640da4f37a97167967de8d09e4c6a6"
+  end
 
-  option 'default-stereo', 'Set stereo graphics as default'
+  # This patch disables the vmd plugin. VMD is not something we can depend on for now.
+  # The plugin is set to always install as of revision 4019.
+  patch :DATA
 
   def install
+    ENV.prepend_create_path "PYTHONPATH", libexec/"vendor/lib/python2.7/site-packages"
+    resource("pmw").stage do
+      system "python", *Language::Python.setup_install_args(libexec/"vendor")
+    end
+
     # PyMol uses ./ext as a backup to look for ./ext/include and ./ext/lib
     ln_s HOMEBREW_PREFIX, "./ext"
-
-    temp_site_packages = lib/which_python/'site-packages'
-    mkdir_p temp_site_packages
-    ENV['PYTHONPATH'] = temp_site_packages
+    ENV.prepend_create_path "PYTHONPATH", libexec/"lib/python2.7/site-packages"
 
     args = [
       "--verbose",
-      "install",
-      "--install-scripts=#{bin}",
-      "--install-lib=#{temp_site_packages}",
+      "--install-scripts=#{libexec}/bin",
+      "--install-lib=#{libexec}/lib/python2.7/site-packages",
     ]
 
-    # build the pymol libraries
-    system "python", "-s", "setup.py", *args
-
-    # get the executable
-    bin.install("pymol")
-  end
-
-  def patches
-    p = []
-    # This patch adds checks that force mono as default
-    p << 'https://gist.github.com/scicalculator/1b84b2ad3503395f1041/raw/2a85dc56b4bd1ea28d99ce0b94acbf7ac880deff/pymol_disable_stereo.diff' unless build.include? 'default-stereo'
-    # This patch disables the vmd plugin. VMD is not something we can depend on for now. The plugin is set to always install as of revision 4019.
-    p << 'https://gist.github.com/scicalculator/4966279/raw/9eb79bf5b6a36bd8f684bae46be2fcf834fea8de/pymol_disable_vmd_plugin.diff'
-    p
-  end
-
-  def which_python
-    "python" + `python -c 'import sys;print(sys.version[:3])'`.strip
+    system "python", "-s", "setup.py", "install", *args
+    bin.install libexec/"bin/pymol"
+    bin.env_script_all_files(libexec/"bin", :PYTHONPATH => ENV["PYTHONPATH"])
   end
 
   test do
-    system "#{bin}/pymol #{lib}/python2.7/site-packages/pymol/pymol_path/data/demo/pept.pdb"
-    #   system "pymol","-b","-d","quit"
+    system bin/"pymol", libexec/"lib/python2.7/site-packages/pymol/pymol_path/data/demo/pept.pdb"
   end
 
-  def caveats
-    <<-EOS.undent
-
-    In order to get the most out of pymol, you will want the external
-    gui. This requires a thread enabled tk installation and python
-    linked to it. Install these with the following commands.
+  def caveats; <<-EOS.undent
+    In order to get the most out of PyMOL, you will want the external
+    GUI. This requires a thread enabled Tk installation and Python
+    linked to it. Install these with the following commands:
       brew tap homebrew/dupes
       brew install homebrew/dupes/tcl-tk --enable-threads --with-x11
       brew install python --with-brewed-tk
 
-    On some macs, the graphics drivers do not properly support stereo
+    On some Macs, the graphics drivers do not properly support stereo
     graphics. This will cause visual glitches and shaking that stay
-    visible until x11 is completely closed. This may even require
-    restarting your computer. Therefore, we install pymol in a way that
-    defaults to mono graphics. This is equivalent to running pymol with
-    the "-M" option. You can still run in stereo mode by running
-      pymol -S
-
-    You can install pymol such that it defaults to stereo with the
-    "--default-stereo" option.
+    visible until X11 is completely closed. This may even require
+    restarting your computer. Launch explicitly in Mono mode using:
+      pymol -M
 
     EOS
   end
-
 end
+
+__END__
+diff --git a/setup.py b/setup.py
+index 8fd9bc1..5684ae3 100644
+--- a/setup.py
++++ b/setup.py
+@@ -197,7 +197,7 @@ ext_link_args = []
+ data_files = []
+ ext_modules = []
+
+-if True:
++if False:
+     # VMD plugin support
+     pymol_src_dirs += [
+         'contrib/uiuc/plugins/include',

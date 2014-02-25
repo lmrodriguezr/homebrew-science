@@ -1,44 +1,52 @@
-require 'formula'
-
 class Delly < Formula
-  homepage 'http://www.embl.de/~rausch/delly.html'
-  url 'http://www.embl.de/~rausch/delly_source_v0.0.11.tar.gz'
-  sha1 'd0e1cd95a0d526e308c5aff88c19212e558d9a1f'
+  homepage "https://github.com/tobiasrausch/delly"
+  url "https://github.com/tobiasrausch/delly/archive/v0.6.5.tar.gz"
+  sha256 "6977001ef3a3eb5049515a4586640f77d60c4f784f7636c7c5cc456912081283"
 
-  depends_on 'bamtools'
-  depends_on 'boost'
+  head "https://github.com/tobiasrausch/delly.git"
 
-  def patches
-    # Allows Makefile to find boost and bamtools within Homebrew hierarchy
-    DATA
+  bottle do
+    root_url "https://homebrew.bintray.com/bottles-science"
+    sha256 "2abe5ca47e8e9de6bd7a38912063841959e6f0ac9ff4bf35ddc1f74e626f009d" => :yosemite
+    sha256 "32bf93246a9b613221d5c4144dc7d42f1e85f2b920c30b02f639597a3688f6b8" => :mavericks
+    sha256 "f74527a577cf146ac7b72d1f23c8105112fc57c207820dcc4cb08589624c28cf" => :mountain_lion
+  end
+
+  option "with-binary", "Install a statically linked binary for 64-bit Linux" if OS.linux?
+
+  if build.without? "binary"
+    depends_on "bamtools"
+    depends_on "boost"
+    depends_on "htslib"
+  end
+
+  resource "linux-binary-0.6.5" do
+    url "https://github.com/tobiasrausch/delly/releases/download/v0.6.5/delly_v0.6.5_CentOS5.4_x86_64bit"
+    sha256 "56ccdbd5e21d3570c7e34c82593e9ef5d86509f23f57e3e364bcd3f5a7e6899c"
   end
 
   def install
-    cd 'pemgr' do
-      inreplace 'Makefile', 'LDFLAGS += --static', ''
-      inreplace 'Makefile', /(-lboost[^ ]*)/, '\1-mt' if OS.mac?
-      system 'make', "CXX=#{ENV.cxx}"
-      bin.install %w{delly/delly duppy/duppy invy/invy jumpy/jumpy}
+    if build.with? "binary"
+      resource("linux-binary-0.6.5").stage do
+        bin.install "delly_v0.6.5_CentOS5.4_x86_64bit" => "delly"
+      end
+    else
+      inreplace "Makefile", ".htslib .bamtools .boost", ""
+      ENV.append_to_cflags "-I#{Formula["bamtools"].opt_include}/bamtools"
+      ENV.append_to_cflags "-I#{Formula["htslib"].opt_include}/htslib"
+
+      system "make", "BAMTOOLS_ROOT=#{Formula["bamtools"].opt_prefix}",
+                     "SEQTK_ROOT=#{Formula["htslib"].opt_prefix}",
+                     "BOOST_ROOT=#{Formula["boost"].opt_prefix}",
+                     "src/delly"
+      bin.install "src/delly"
     end
-    doc.install 'README'
+    share.install "test", "variantFiltering"
+    doc.install "README.md"
   end
 
   test do
-    system 'delly 2>&1 |grep -q delly'
+    system "delly", "--outfile=#{testpath}/test.vcf", share/"test/DEL.bam"
+    File.exist? testpath/"test.vcf"
   end
 end
-__END__
---- a/pemgr/Makefile	2013-06-06 16:19:51.000000000 -0400
-+++ b/pemgr/Makefile	2013-10-17 06:29:19.132265246 -0400
-@@ -1,8 +1,8 @@
--BOOST=/g/solexa/bin/software/boost_1_53_0
--BAMTOOLS=/g/solexa/bin/software/bamtools/
-+BOOST=HOMEBREW_PREFIX
-+BAMTOOLS=HOMEBREW_PREFIX
- 
- CXX=g++
--CXXFLAGS += -isystem ${BOOST}/include -isystem ${BAMTOOLS}/include -I../torali
-+CXXFLAGS += -isystem ${BOOST}/include -isystem ${BAMTOOLS}/include/bamtools -I../torali
- CXXFLAGS += -O9 -pedantic -W -Wall
- 
- ### Valgrind

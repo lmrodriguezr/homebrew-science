@@ -1,21 +1,24 @@
-require 'formula'
-
 class Mcl < Formula
-  homepage 'http://micans.org/mcl'
-  url 'http://micans.org/mcl/src/mcl-12-135.tar.gz'
-  version '12-135'
-  sha1 '27e7bc08fe5f0d3361bbc98d343c9d045712e406'
+  homepage "http://micans.org/mcl"
+  url "http://micans.org/mcl/src/mcl-14-137.tar.gz"
+  version "14-137"
+  sha256 "b5786897a8a8ca119eb355a5630806a4da72ea84243dba85b19a86f14757b497"
+
+  bottle do
+    root_url "https://homebrew.bintray.com/bottles-science"
+    cellar :any
+    sha256 "ee751daa79605617936d8ec30f456d46d13729dbf3a43238b746683f721145c2" => :yosemite
+    sha256 "e8e0fcb0da6f1177a00d4c11674824df03944c0896d1e752f513fdd94f74fa17" => :mavericks
+    sha256 "0eb411a4a383fdfee14fefa90588a5d3cad38930a94866a4683bb22e219d6db6" => :mountain_lion
+  end
 
   def install
-    # Force the compiler to run in C89 mode because one of the source
-    # files uses "restrict" as a variable name and this is a restricted
-    # keyword in C99
-    ENV.append_to_cflags '-std=c89'
-
     bin.mkpath
     system "./configure", "--disable-dependency-tracking",
                           "--prefix=#{prefix}",
                           "--enable-blast"
-    system "make install"
+    system "make", "install"
+    inreplace bin/"mcxdeblast", "/usr/local/bin/perl -w", "/usr/bin/env perl\nuse warnings;"
+    inreplace bin/"clxdo", "/usr/local/bin/perl", "perl"
   end
 end

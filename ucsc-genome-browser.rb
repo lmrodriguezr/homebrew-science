@@ -1,47 +1,46 @@
-require 'formula'
-
 class UcscGenomeBrowser < Formula
-  homepage 'http://genome.ucsc.edu'
-  url 'http://hgdownload.cse.ucsc.edu/admin/jksrc.v295.zip'
-  sha1 'f3853d4aab5c67dfd6a64bfd869261812fab1b19'
-  head 'git://genome-source.cse.ucsc.edu/kent.git'
+  homepage "http://genome.ucsc.edu"
+  #doi "10.1093/nar/gkq963"
+  #tag "bioinformatics"
+
+  url "http://hgdownload.cse.ucsc.edu/admin/jksrc.v304.zip"
+  sha1 "499f9f758bae7d43a013a9629ced7fddedca29ee"
+  head "git://genome-source.cse.ucsc.edu/kent.git"
 
   keg_only <<-EOF.undent
     The UCSC Genome Browser installs many commands, and some conflict
     with other packages.
   EOF
 
-  depends_on :libpng
+  depends_on "libpng"
   depends_on :mysql
+  depends_on "openssl"
 
   def install
-    # Patch for OSX cp, fixed in HEAD
-    inreplace "src/hg/js/makefile", "cp -p --update", "rsync -a" unless build.head?
-
     ENV.j1
     machtype = `uname -m`.chomp
     user = `whoami`.chomp
     mkdir prefix/"cgi-bin-#{user}"
     mkdir prefix/"htdocs-#{user}"
-    cd 'src/lib' do
-      system 'make', "MACHTYPE=#{machtype}"
+    cd "src/lib" do
+      system "make", "MACHTYPE=#{machtype}"
     end
-    cd 'src/jkOwnLib' do
-      system 'make', "MACHTYPE=#{machtype}"
+    cd "src/jkOwnLib" do
+      system "make", "MACHTYPE=#{machtype}"
     end
-    cd 'src' do
-      system 'make',
+    cd "src" do
+      system "make",
         "MACHTYPE=#{machtype}",
         "BINDIR=#{bin}",
-        "SCRIPTS=#{bin}/scripts",
+        "SCRIPTS=#{prefix}/scripts",
         "CGI_BIN=#{prefix}/cgi-bin",
         "DOCUMENTROOT=#{prefix}/htdocs",
-        "PNGLIB=-L#{HOMEBREW_PREFIX}/lib -lpng",
+        "PNGLIB=-L#{Formula["libpng"].opt_lib} -lpng",
         "MYSQLLIBS=-lmysqlclient -lz",
-        "MYSQLINC=#{HOMEBREW_PREFIX}/include/mysql"
+        "MYSQLINC=#{Formula["mysql"].opt_include}/mysql"
     end
-    mv "#{prefix}/cgi-bin-#{user}", prefix/'cgi-bin'
-    mv "#{prefix}/htdocs-#{user}", prefix/'htdocs'
+    mv "#{prefix}/cgi-bin-#{user}", prefix/"cgi-bin"
+    mv "#{prefix}/htdocs-#{user}", prefix/"htdocs"
   end
 
   # Todo: Best would be if this formula would put a complete working

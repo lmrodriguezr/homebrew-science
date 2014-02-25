@@ -4,12 +4,11 @@ class Hopdm < Formula
   homepage 'http://www.maths.ed.ac.uk/~gondzio/software/hopdm.html'
   url 'http://dl.dropbox.com/u/72178/dist/hopdm-2.13.tar.gz'
   sha1 '5d4df64f1a03251c0c22f9d292c26da2f2cea1eb'
+  revision 1
 
   depends_on :fortran
 
-  def patches
-    DATA
-  end
+  patch :DATA
 
   def install
     inreplace 'makefile' do |s|

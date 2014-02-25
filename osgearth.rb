@@ -13,10 +13,10 @@ class Osgearth < Formula
   option "with-docs-examples", "Build and install html documentation and examples"
 
   depends_on "cmake" => :build
-  depends_on "open-scene-graph"
   depends_on "gdal"
   depends_on "sqlite"
   depends_on "qt" => :recommended
+  depends_on "open-scene-graph" => (build.with? "qt") ? ["with-qt"] : []
   depends_on "minizip" => :recommended
   depends_on "v8" => :optional
   depends_on "tinyxml" => :optional
@@ -30,9 +30,7 @@ class Osgearth < Formula
   # find a v8 lib: https://github.com/gwaldron/osgearth/pull/434
   # find JavaScriptCore lib: https://github.com/gwaldron/osgearth/pull/435
   # find libnoise lib: https://github.com/gwaldron/osgearth/pull/436
-  def patches
-    DATA
-  end
+  patch :DATA
 
   def install
     if build.with? "docs-examples" and not which("sphinx-build")
@@ -61,7 +59,7 @@ class Osgearth < Formula
       args << "-DV8_ICUI18N_LIBRARY=''" << "-DV8_ICUUC_LIBRARY=''"
     end
     # define libminizip paths (skips the only pkconfig dependency in cmake modules)
-    mzo = Formula.factory("minizip").opt_prefix
+    mzo = Formula["minizip"].opt_prefix
     args << "-DMINIZIP_INCLUDE_DIR=#{(build.with? "minizip") ? mzo/"include/minizip" : "''"}"
     args << "-DMINIZIP_LIBRARY=#{(build.with? "minizip") ? mzo/"lib/libminizip.dylib" : "''"}"
 
@@ -82,7 +80,7 @@ class Osgearth < Formula
   end
 
   def caveats
-    osg = Formula.factory("open-scene-graph")
+    osg = Formula["open-scene-graph"]
     osgver = (osg.linked_keg.exist?) ? osg.version : "#.#.# (version)"
     <<-EOS.undent
     This formula installs Open Scene Graph plugins. To ensure access when using
