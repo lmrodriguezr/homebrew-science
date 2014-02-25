@@ -7,8 +7,8 @@ class Velvet < Formula
 
   head 'https://github.com/dzerbino/velvet.git'
 
-  option 'with-maxkmerlength=<value>', 'Specify maximum k-mer length, any positive odd integer'
-  option 'with-categories=<value>', 'Specify number of categories, any positive integer'
+  option 'with-maxkmerlength=<value>', 'Specify maximum k-mer length, any positive odd integer (default: 31)'
+  option 'with-categories=<value>', 'Specify number of categories, any positive integer (default: 1)'
 
   def install
     inreplace 'Makefile' do |s|
@@ -32,11 +32,6 @@ class Velvet < Formula
 
   def caveats
     <<-EOS.undent
-      If you want to build with a different maximum k-mer length and/or
-      a different number of categories, use the options --with-maxkmerlength
-      and --with-categories.  By default, Velvet builds with maximum k-mer
-      length of 31, and one category.
-      
       Some additional user contributed scripts are installed here:
       #{share}/velvet/contrib
     EOS
