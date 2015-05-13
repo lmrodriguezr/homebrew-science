@@ -2,6 +2,9 @@ require 'formula'
 
 class Nonpareil < Formula
   homepage 'http://enve-omics.ce.gatech.edu/nonpareil'
+  #doi "10.1093/bioinformatics/btt584"
+  #tag "bioinformatics"
+  
   url 'https://github.com/lmrodriguezr/nonpareil/archive/v2.4.tar.gz'
   sha1 '4fb6c86740b2a6b71a9d22bb027729f0a9058bc3'
 
