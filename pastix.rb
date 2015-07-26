@@ -1,31 +1,39 @@
-require 'formula'
-
 class Pastix < Formula
-  homepage 'http://pastix.gforge.inria.fr'
-  url 'https://gforge.inria.fr/frs/download.php/33274/pastix_release_bugfix3_6eafa91.tar.bz2'
-  sha1 '9ab64ed4243928255102a980a85c4b9ae222401e'
-  head 'git://scm.gforge.inria.fr/ricar/ricar.git'
-  version '5.2.2'
+  homepage "http://pastix.gforge.inria.fr"
+  url "https://gforge.inria.fr/frs/download.php/file/34392/pastix_5.2.2.20.tar.bz2"
+  sha1 "d55acf287ed0b6a59fc12606a21e42e3d38507c5"
+  head "git://scm.gforge.inria.fr/ricar/ricar.git"
+  revision 3
 
-  depends_on 'scotch'   => :build
-  depends_on 'hwloc'
-  depends_on 'metis4'   => :optional     # Use METIS ordering.
-  depends_on 'openblas' => :optional     # Use Accelerate by default.
+  bottle do
+    sha256 "4dc1de1d66b728154b6157095259c4231b20f450e57d872f7b8252c8a558d55f" => :yosemite
+    sha256 "8ba979033897b56109d1f50a5e5270ff11d3ed756b771498ffd2cfd299724b44" => :mavericks
+    sha256 "c937cf0feae8da2a185ac9e984c917fba3b5cfd0c19f6518d4ca0938ec671efc" => :mountain_lion
+  end
 
-  depends_on :mpi       => [:cc, :f90]
+  depends_on "scotch"
+  depends_on "hwloc"
+  depends_on "metis4"   => :optional     # Use METIS ordering.
+  depends_on "openblas" => :optional     # Use Accelerate by default.
+
+  depends_on :mpi       => [:cc, :cxx, :f90]
   depends_on :fortran
 
   def install
     ENV.deparallelize
 
-    cd 'src' do
-      cp 'config/MAC.in', 'config.in'
-      inreplace 'config.in' do |s|
-        s.change_make_var! "CCPROG", ENV.compiler
-        s.change_make_var! "CFPROG", ENV['FC']
-        s.change_make_var! "CF90PROG", ENV['FC']
+    cd "src" do
+      cp "config/MAC.in", "config.in"
+      inreplace "config.in" do |s|
+        s.change_make_var! "CCPROG",    ENV.compiler
+        s.change_make_var! "CFPROG",    ENV["FC"]
+        s.change_make_var! "CF90PROG",  ENV["FC"]
+        s.change_make_var! "MCFPROG",   ENV["MPIFC"]
+        s.change_make_var! "MPCCPROG",  ENV["MPICC"]
+        s.change_make_var! "MPCXXPROG", ENV["MPICXX"]
+        s.change_make_var! "VERSIONBIT", ((MacOS.prefer_64_bit?) ? "_64bit" : "_32bit")
 
-        libgfortran = `mpif90 --print-file-name libgfortran.a`.chomp
+        libgfortran = `#{ENV["MPIFC"]} --print-file-name libgfortran.a`.chomp
         s.change_make_var! "EXTRALIB", "-L#{File.dirname(libgfortran)} -lgfortran -lm"
 
         # set prefix
@@ -53,46 +61,46 @@ class Pastix < Formula
         s.gsub! /#\s*CFPROG\s*:=/, "CFPROG := "
 
         s.gsub! /SCOTCH_HOME\s*\?=/, "SCOTCH_HOME="
-        s.change_make_var! "SCOTCH_HOME", Formula.factory('scotch').prefix
+        s.change_make_var! "SCOTCH_HOME", Formula["scotch"].opt_prefix
 
         s.gsub! /HWLOC_HOME\s*\?=/, "HWLOC_HOME="
-        s.change_make_var! "HWLOC_HOME", Formula.factory('hwloc').prefix
+        s.change_make_var! "HWLOC_HOME", Formula["hwloc"].opt_prefix
 
-        if build.with? 'metis4'
+        if build.with? "metis4"
           s.gsub! /#\s*VERSIONORD\s*=\s*_metis/, "VERSIONORD = _metis"
           s.gsub! /#\s*METIS_HOME/, "METIS_HOME"
-          s.change_make_var! "METIS_HOME", Formula.factory('metis4').prefix
-          s.gsub! /#\s*CCPASTIX\s*:=\s*\$\(CCPASTIX\)\s+-DMETIS\s+-I\$\(METIS_HOME\)\/Lib/, "CCPASTIX := \$(CCPASTIX) -DMETIS -I#{Formula.factory('metis4').include}"
-          s.gsub! /#\s*EXTRALIB\s*:=\s*\$\(EXTRALIB\)\s+-L\$\(METIS_HOME\)\s+-lmetis/, "EXTRALIB := \$\(EXTRALIB\) -L#{Formula.factory('metis4').lib} -lmetis"
+          s.change_make_var! "METIS_HOME", Formula["metis4"].opt_prefix
+          s.gsub! %r{#\s*CCPASTIX\s*:=\s*\$\(CCPASTIX\)\s+-DMETIS\s+-I\$\(METIS_HOME\)/Lib}, "CCPASTIX := \$(CCPASTIX) -DMETIS -I#{Formula["metis4"].opt_include}"
+          s.gsub! /#\s*EXTRALIB\s*:=\s*\$\(EXTRALIB\)\s+-L\$\(METIS_HOME\)\s+-lmetis/, "EXTRALIB := \$\(EXTRALIB\) -L#{Formula["metis4"].opt_lib} -lmetis"
         end
 
-        if build.with? 'openblas'
-          s.gsub! /#\s*BLAS_HOME\s*=\s*\/path\/to\/blas/, "BLAS_HOME = #{Formula.factory('openblas').lib}"
+        if build.with? "openblas"
+          s.gsub! %r{#\s*BLAS_HOME\s*=\s*/path/to/blas}, "BLAS_HOME = #{Formula["openblas"].opt_lib}"
           s.change_make_var! "BLASLIB", "-lopenblas"
         end
       end
       system "make"
-      system "make install"
-      system "make examples"
-      system "./example/bin/simple -lap 100"
-      prefix.install 'config.in'    # For the record.
-      share.install 'example'       # Contains all test programs.
-      ohai 'Simple test result is in ~/Library/Logs/Homebrew/pastix. Please check.'
+      system "make", "install"
+      system "make", "examples"
+      system "./example/bin/simple", "-lap", "100"
+      prefix.install "config.in"    # For the record.
+      share.install "example"       # Contains all test programs.
+      ohai "Simple test result is in ~/Library/Logs/Homebrew/pastix. Please check."
     end
   end
 
-  def test
+  test do
     Dir.foreach("#{share}/example/bin") do |example|
-      next if example =~ /^\./ or example =~ /plot_memory_usage/ or example =~ /mem_trace.o/ or example =~ /murge_sequence/
-      next if example == 'reentrant'  # May fail due to thread handling. See http://goo.gl/SKDGPV
-      if example == 'murge-product'
-        system "#{share}/example/bin/#{example} 100 10 1"
+      next if example =~ /^\./ || example =~ /plot_memory_usage/ || example =~ /mem_trace.o/ || example =~ /murge_sequence/
+      next if example == "reentrant"  # May fail due to thread handling. See http://goo.gl/SKDGPV
+      if example == "murge-product"
+        system "#{share}/example/bin/#{example}", "100", "10", "1"
       elsif example =~ /murge/
-        system "#{share}/example/bin/#{example} 100 4"
+        system "#{share}/example/bin/#{example}", "100", "4"
       else
-        system "#{share}/example/bin/#{example} -lap 100"
+        system "#{share}/example/bin/#{example}", "-lap", "100"
       end
     end
-    ohai 'All test output is in ~/Library/Logs/Homebrew/pastix. Please check.'
+    ohai "All test output is in ~/Library/Logs/Homebrew/pastix. Please check."
   end
 end

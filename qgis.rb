@@ -42,23 +42,23 @@ class Qgis < Formula
     # Set bundling level back to 0 (the default in all versions prior to 1.8.0)
     # so that no time and energy is wasted copying the Qt frameworks into QGIS.
     args = std_cmake_args.concat %W[
-      -DQWT_INCLUDE_DIR=#{Formula.factory('qwt').opt_prefix}/lib/qwt.framework/Headers/
-      -DQWT_LIBRARY=#{Formula.factory('qwt').opt_prefix}/lib/qwt.framework/qwt
-      -DBISON_EXECUTABLE=#{Formula.factory('bison').opt_prefix}/bin/bison
+      -DQWT_INCLUDE_DIR=#{Formula["qwt"].opt_prefix}/lib/qwt.framework/Headers/
+      -DQWT_LIBRARY=#{Formula["qwt"].opt_prefix}/lib/qwt.framework/qwt
+      -DBISON_EXECUTABLE=#{Formula["bison"].opt_prefix}/bin/bison
       -DENABLE_TESTS=NO
       -DQGIS_MACAPP_BUNDLE=0
-      -DQGIS_MACAPP_DEV_PREFIX='#{prefix}/Frameworks'
+      -DQGIS_MACAPP_DEV_PREFIX='#{frameworks}'
       -DQGIS_MACAPP_INSTALL_DEV=YES
       -DPYTHON_LIBRARY='#{%x(python-config --prefix).chomp}/lib/libpython2.7.dylib'
     ]
 
-    args << "-DGRASS_PREFIX='#{Formula.factory('grass').opt_prefix}'" if build.with? 'grass'
+    args << "-DGRASS_PREFIX='#{Formula["grass"].opt_prefix}'" if build.with? 'grass'
 
     # So that `libintl.h` can be found
-    ENV.append 'CXXFLAGS', "-I'#{Formula.factory('gettext').opt_prefix}/include'" if build.with? 'grass'
+    ENV.append 'CXXFLAGS', "-I'#{Formula["gettext"].opt_prefix}/include'" if build.with? 'grass'
 
     # Avoid ld: framework not found QtSql (https://github.com/Homebrew/homebrew-science/issues/23)
-    ENV.append 'CXXFLAGS', "-F#{Formula.factory('qt').opt_prefix}/lib"
+    ENV.append 'CXXFLAGS', "-F#{Formula["qt"].opt_prefix}/lib"
 
     Dir.mkdir 'build'
     Dir.chdir 'build' do

@@ -1,26 +1,22 @@
-require 'formula'
-
 class RmlMmc < Formula
-  homepage 'http://www.ida.liu.se/labs/pelab/rml'
-  url 'http://build.openmodelica.org/apt/pool/contrib/rml-mmc_255.orig.tar.gz'
-  version '2.5.5'
-  sha1 'ab173438a56f344904f6d02ccc8d6a360896219d'
+  homepage "http://www.ida.liu.se/labs/pelab/rml"
+  url "http://build.openmodelica.org/apt/pool/contrib/rml-mmc_280.orig.tar.gz"
+  version "2.8.0"
+  sha256 "7b184af0a802847fa4bfeb610d0f0ef12352debe68fe500fcf73c931b5cf3ffb"
 
-  # Attention, has a self-signed certificate and svn will prompt you, so
-  # do not use --HEAD as a dependency or automatic installation (built-bot).
-  head 'https://openmodelica.org/svn/MetaModelica/trunk', :using => :svn
+  head "https://openmodelica.org/svn/MetaModelica/trunk", :using => :svn
 
-  depends_on 'smlnj'
+  depends_on "smlnj"
 
   def install
     ENV.j1
-    ENV['SMLNJ_HOME'] = Formula.factory("smlnj").prefix/'SMLNJ_HOME'
+    ENV["SMLNJ_HOME"] = Formula["smlnj"].opt_prefix/"SMLNJ_HOME"
 
-    system "./configure --prefix=#{prefix}"
-    system "make install"
+    system "./configure", "--prefix=#{prefix}"
+    system "make", "install"
   end
 
-  def test
+  test do
     system "#{bin}/rml", "-v"
   end
 end

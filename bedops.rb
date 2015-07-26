@@ -1,38 +1,31 @@
-require 'formula'
-
 class Bedops < Formula
   homepage 'https://github.com/bedops/bedops'
+  #doi "10.1093/bioinformatics/bts277"
+  #tag "bioinformatics"
+
+  url "https://github.com/bedops/bedops/archive/v2.4.14.tar.gz"
+  sha1 "7e7f721b033f9d4b706c036d439af3f3bb0c5efe"
+
   head 'https://github.com/bedops/bedops.git'
 
-  url 'https://github.com/bedops/bedops/archive/v2.4.0.tar.gz'
-  sha1 'fc369ba3f521b0664786e9b4018f39f9a67b6701'
-
-  devel do
-    version '2.4.1-rc1'
-    url 'https://github.com/bedops/bedops/archive/v2.4.1-rc1.tar.gz'
-    sha1 '436c769af8ffac70f4d7f02922915d3c71c5af88'
+  bottle do
+    cellar :any
+    sha256 "ac1a745078141fc3c14950ba1bd27b15cc886ac5290942f03572d8f76b127a8a" => :yosemite
+    sha256 "24f16e72a7f1401a67e50c851bcc02ea1d694fc08092331ebc611010acc24085" => :mavericks
+    sha256 "c4c3d988b952f794b2bd41c7d9be8ec13ea27549c26d60a50611ed97ad0825bb" => :mountain_lion
   end
 
-  # Fixed in 2.4.1-rc1
-  fails_with :clang do
-    build 500
-    cause "error: no matching constructor for initialization of 'Ext::Assert<UE>'"
-  end unless build.devel? || build.head?
+  env :std
 
   fails_with :gcc do
     build 5666
-    cause 'error: unrecognized command line option "-std=c++11"'
+    cause 'BEDOPS toolkit requires a C++11 compliant compiler'
   end
 
   def install
-    ENV.deparallelize
-
-    # Fix for
-    # error: assigning to 'struct object_key *' from incompatible type 'void *'
-    # See https://github.com/Homebrew/homebrew-science/issues/666
-    ENV.delete 'CC'
-    ENV.delete 'CXX'
-
+    ENV.O3
+    ENV.delete('CFLAGS')
+    ENV.delete('CXXFLAGS')
     system 'make'
     system 'make', 'install'
     bin.install Dir['bin/*']

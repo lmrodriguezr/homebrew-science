@@ -8,24 +8,18 @@ class Beetl < Formula
   depends_on 'boost' => :optional
   depends_on 'seqan' => :optional
 
-  fails_with :clang do
-    build 500
-    cause 'Requires OpenMP'
-  end
+  needs :cxx11
+  needs :openmp
 
-  fails_with :gcc do
-    build 5666
-    cause 'Requires C++11'
-  end
-
-  def patches
+  patch do
     # Include necessary headers
-    'https://github.com/sjackman/BEETL/commit/c91ad73.patch'
+    url "https://github.com/sjackman/BEETL/commit/c91ad73.diff"
+    sha1 "6aca0f9a045e8831b15b050691a3ce1d5cd3609d"
   end
 
   def install
-    boost = Formula.factory('boost').opt_prefix
-    seqan = Formula.factory('seqan').opt_prefix/'include'
+    boost = Formula["boost"].opt_prefix
+    seqan = Formula["seqan"].opt_prefix/'include'
     args = [
       '--disable-dependency-tracking',
       '--disable-silent-rules',

@@ -1,17 +1,23 @@
-require 'formula'
-
 class Lammps < Formula
-  homepage 'http://lammps.sandia.gov'
-  url 'http://lammps.sandia.gov/tars/lammps-12Feb14.tar.gz'
-  sha1 '2572cce8343862c32c6e4079b91a26637ae3c6b7'
+  homepage "http://lammps.sandia.gov"
+  url "http://lammps.sandia.gov/tars/lammps-10Feb15.tar.gz"
+  sha256 "f7b785b656537507feaa7d669e9b676ff87967223f7c153aa01ed89e4e7b9e92"
   # lammps releases are named after their release date. We transform it to
   # YYYY.MM.DD (year.month.day) so that we get a comparable version numbering (for brew outdated)
-  version '2014.02.12'
+  version "2015.02.10"
+  revision 1
 
-  head 'http://git.icms.temple.edu/lammps-ro.git'
+  head "http://git.icms.temple.edu/lammps-ro.git"
+
+  bottle do
+    cellar :any
+    sha256 "3f66831fed5f14b9f122f8ef54ec6d25f82e95fb6731bbfae0971d9b856ffe71" => :yosemite
+    sha256 "11887bd0166669fbff851963e3fa47dac112be2860a6fbc68cc5883ff3f8f333" => :mavericks
+    sha256 "c2df2c7d94118f61161871f68222bb2dd049311a8991290eb444851c1d9cb2ae" => :mountain_lion
+  end
 
   # user-submitted packages not considered "standard"
-  USER_PACKAGES= %W[
+  USER_PACKAGES = %w(
     user-misc
     user-awpmd
     user-cg-cmm
@@ -20,30 +26,31 @@ class Lammps < Formula
     user-molfile
     user-reaxc
     user-sph
-  ]
+  )
 
   # could not get gpu or user-cuda to install (hardware problem?)
   # kim requires openkim software, which is not currently in homebrew.
   # user-atc would not install without mpi and then would not link to blas-lapack
   # user-omp requires gcc dependency (tricky). clang does not have OMP support, yet.
-  DISABLED_PACKAGES = %W[
+  DISABLED_PACKAGES = %w(
     gpu
     kim
     user-omp
-  ]
-  DISABLED_USER_PACKAGES = %W[
+    kokkos
+  )
+  DISABLED_USER_PACKAGES = %w(
     user-atc
     user-cuda
-  ]
+  )
 
   # setup user-packages as options
   USER_PACKAGES.each do |package|
     option "enable-#{package}", "Build lammps with the '#{package}' package"
   end
 
-  depends_on 'fftw'
-  depends_on 'jpeg'
-  depends_on 'voro++'
+  depends_on "fftw"
+  depends_on "jpeg"
+  depends_on "voro++"
   depends_on :mpi => [:cxx, :f90, :recommended] # dummy MPI library provided in src/STUBS
   depends_on :fortran
 
@@ -51,7 +58,7 @@ class Lammps < Formula
     change_compiler_var = opts[:change_compiler_var]  # a non-standard compiler name to replace
     prefix_make_var = opts[:prefix_make_var] || ""                    # prepended to makefile variable names
 
-    cd "lib/"+lmp_lib do
+    cd "lib/" + lmp_lib do
       if comp == "FC"
         make_file = "Makefile.gfortran" # make file
         compiler_var = "F90"                    # replace compiler
@@ -72,23 +79,32 @@ class Lammps < Formula
 
       system "make", "-f", make_file
 
-      if File.exists? "Makefile.lammps"
+      if File.exist? "Makefile.lammps"
         # empty it to reduce chance of conflicts
         inreplace "Makefile.lammps" do |s|
-          s.change_make_var! prefix_make_var+lmp_lib+"_SYSINC", ""
-          s.change_make_var! prefix_make_var+lmp_lib+"_SYSLIB", ""
-          s.change_make_var! prefix_make_var+lmp_lib+"_SYSPATH", ""
+          s.change_make_var! prefix_make_var + lmp_lib + "_SYSINC", ""
+          s.change_make_var! prefix_make_var + lmp_lib + "_SYSLIB", ""
+          s.change_make_var! prefix_make_var + lmp_lib + "_SYSPATH", ""
         end
       end
     end
   end
 
+  def pyver
+    Language::Python.major_minor_version "python"
+  end
+
+  # This fixes the python module to point to the absolute path of the lammps library
+  # without this the module cannot find the library when homebrew is installed in a
+  # custom directory.
+  patch :DATA
+
   def install
     ENV.j1      # not parallel safe (some packages have race conditions :meam:)
 
     # make sure to optimize the installation
-    ENV.append "CFLAGS","-O"
-    ENV.append "LDFLAGS","-O"
+    ENV.append "CFLAGS", "-O"
+    ENV.append "LDFLAGS", "-O"
 
     if build.with? :mpi
       # Simplify by relying on the mpi compilers
@@ -102,44 +118,45 @@ class Lammps < Formula
     build_lib "CXX",   "poems"
     build_lib "CXX",   "colvars", :change_compiler_var => "CXX"  if build.include? "enable-user-colvars"
     if build.include? "enable-user-awpmd"
-      build_lib "MPICXX","awpmd",   :prefix_make_var => "user-"
-      ENV.append 'LDFLAGS', "-lblas -llapack"
+      build_lib "MPICXX", "awpmd", :prefix_make_var => "user-"
+      ENV.append "LDFLAGS", "-lblas -llapack"
     end
 
-    # Assuming gfortran library
-    ENV.append 'LDFLAGS', "-L#{Formula.factory('gfortran').opt_prefix}/gfortran/lib -lgfortran"
+    # Locate gfortran library
+    libgfortran = `$FC --print-file-name libgfortran.a`.chomp
+    ENV.append "LDFLAGS", "-L#{File.dirname libgfortran} -lgfortran"
+
+    inreplace "lib/voronoi/Makefile.lammps" do |s|
+      s.change_make_var! "voronoi_SYSINC", "-I#{Formula["voro++"].opt_include}/voro++"
+    end
 
     # build the lammps program and library
     cd "src" do
       # setup the make file variabls for fftw, jpeg, and mpi
-      inreplace "MAKE/Makefile.mac" do |s|
+      inreplace "MAKE/MACHINES/Makefile.mac" do |s|
         # We will stick with "make mac" type and forget about
         # "make mac_mpi" because it has some unnecessary
         # settings. We get a nice clean slate with "mac"
         if build.with? :mpi
           #-DOMPI_SKIP_MPICXX is to speed up c++ compilation
-          s.change_make_var! "MPI_INC"  , "-DOMPI_SKIP_MPICXX"
-          s.change_make_var! "MPI_PATH" , ""
-          s.change_make_var! "MPI_LIB"  , ""
+          s.change_make_var! "MPI_INC",  "-DOMPI_SKIP_MPICXX"
+          s.change_make_var! "MPI_PATH", ""
+          s.change_make_var! "MPI_LIB",  ""
         end
-        s.change_make_var! "CC"   , ENV["CXX"]
-        s.change_make_var! "LINK" , ENV["CXX"]
+        s.change_make_var! "CC",   ENV["CXX"]
+        s.change_make_var! "LINK", ENV["CXX"]
 
         # installing with FFTW and JPEG
-        s.change_make_var! "FFT_INC"  , "-DFFT_FFTW3 -I#{Formula.factory('fftw').opt_prefix}/include"
-        s.change_make_var! "FFT_PATH" , "-L#{Formula.factory('fftw').opt_prefix}/lib"
-        s.change_make_var! "FFT_LIB"  , "-lfftw3"
+        s.change_make_var! "FFT_INC",  "-DFFT_FFTW3 -I#{Formula['fftw'].opt_prefix}/include"
+        s.change_make_var! "FFT_PATH", "-L#{Formula['fftw'].opt_prefix}/lib"
+        s.change_make_var! "FFT_LIB",  "-lfftw3"
 
-        s.change_make_var! "JPG_INC"  , "-DLAMMPS_JPEG -I#{Formula.factory('jpeg').opt_prefix}/include"
-        s.change_make_var! "JPG_PATH" , "-L#{Formula.factory('jpeg').opt_prefix}/lib"
-        s.change_make_var! "JPG_LIB"  , "-ljpeg"
+        s.change_make_var! "JPG_INC",  "-DLAMMPS_JPEG -I#{Formula['jpeg'].opt_prefix}/include"
+        s.change_make_var! "JPG_PATH", "-L#{Formula['jpeg'].opt_prefix}/lib"
+        s.change_make_var! "JPG_LIB",  "-ljpeg"
 
-        s.change_make_var! "CCFLAGS" , ENV["CFLAGS"]
-        s.change_make_var! "LIB"     , ENV["LDFLAGS"]
-      end
-
-      inreplace "VORONOI/Makefile.lammps" do |s|
-        s.change_make_var! "voronoi_SYSINC", "-I#{HOMEBREW_PREFIX}/include/voro++"
+        s.change_make_var! "CCFLAGS",  ENV["CFLAGS"]
+        s.change_make_var! "LIB",      ENV["LDFLAGS"]
       end
 
       # setup standard packages
@@ -153,7 +170,7 @@ class Lammps < Formula
         system "make", "yes-" + pkg if build.include? "enable-" + pkg
       end
 
-      unless build.with? :mpi
+      if build.without? :mpi
         # build fake mpi library
         cd "STUBS" do
           system "make"
@@ -171,14 +188,13 @@ class Lammps < Formula
       bin.install("lammps")
       lib.install("liblammps_mac.so")
       lib.install("liblammps.so") # this is just a soft-link to liblamps_mac.so
-
     end
 
     # get the python module
     cd "python" do
-      temp_site_packages = lib/which_python/'site-packages'
+      temp_site_packages = lib/"python#{pyver}/site-packages"
       mkdir_p temp_site_packages
-      ENV['PYTHONPATH'] = temp_site_packages
+      ENV["PYTHONPATH"] = temp_site_packages
 
       system "python", "install.py", lib, temp_site_packages
       mv "examples", "python-examples"
@@ -186,18 +202,15 @@ class Lammps < Formula
     end
 
     # install additional materials
-    (share/'lammps').install(["doc", "potentials", "tools", "bench"])
+    (share / "lammps").install(%w(doc potentials tools bench examples))
   end
 
-  def which_python
-    "python" + `python -c 'import sys;print(sys.version[:3])'`.strip
-  end
-
-  def test
+  test do
+    ENV.prepend_create_path "PYTHONPATH", lib + "python#{pyver}/site-packages"
     # to prevent log files, move them to a temporary directory
     mktemp do
-      system "lammps","-in","#{HOMEBREW_PREFIX}/share/lammps/bench/in.lj"
-      system "python","-c","from lammps import lammps ; lammps().file('#{HOMEBREW_PREFIX}/share/lammps/bench/in.lj')"
+      system "lammps", "-in", "#{HOMEBREW_PREFIX}/share/lammps/bench/in.lj"
+      system "python", "-c", "from lammps import lammps ; lammps().file('#{HOMEBREW_PREFIX}/share/lammps/bench/in.lj')"
     end
   end
 
@@ -224,18 +237,11 @@ class Lammps < Formula
       Additional tools (may require manual installation):
       #{HOMEBREW_PREFIX}/share/lammps/tools
 
-    To use the Python module with non-homebrew Python, you need to amend your
-    PYTHONPATH like so:
-      export PYTHONPATH=#{HOMEBREW_PREFIX}/lib/python2.7/site-packages:$PYTHONPATH
+    To use the Python module with Python, you may need to amend your
+    PYTHONPATH like:
+      export PYTHONPATH=#{HOMEBREW_PREFIX}/lib/python#{pyver}/site-packages:$PYTHONPATH
 
     EOS
-  end
-
-  # This fixes the python module to point to the absolute path of the lammps library
-  # without this the module cannot find the library when homebrew is installed in a
-  # custom directory.
-  def patches
-    DATA
   end
 end
 

@@ -2,9 +2,15 @@ require 'formula'
 
 class Qualimap < Formula
   homepage 'http://qualimap.bioinfo.cipf.es/'
-  url 'http://qualimap.bioinfo.cipf.es/release/qualimap_v0.7.1.zip'
-  sha1 '65be770802797998fa1a96fb3c12558b8b741052'
-
+  url 'https://bitbucket.org/kokonech/qualimap/downloads/qualimap-build-30-03-15.tar.gz'
+  sha1 'ce5c8262493bda49f3eafd2568b11dfc84af7f64'
+  version '30-03-15'
+  bottle do
+    cellar :any
+    sha256 "19f916083ad21fe1a05315be7a1ed49c0a7793dddf0f1735af7527ea82e1dd18" => :yosemite
+    sha256 "66f1205aee6ae32ce98072e2176f90c37ac456a8b13bb2b1d657af21a0044704" => :mavericks
+    sha256 "71fadee98ab35e9d47bd06e9081e32848671b58c3e58c0b718e6fb5743f73f6f" => :mountain_lion
+  end
   depends_on 'r' => :optional
 
   def install
@@ -14,7 +20,7 @@ class Qualimap < Formula
     doc.install 'QualimapManual.pdf'
   end
 
-  def test
+  test do
     system 'qualimap', '-h'
   end
 end

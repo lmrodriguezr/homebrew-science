@@ -1,19 +1,26 @@
-require 'formula'
-
 class Mrbayes < Formula
-  homepage 'http://mrbayes.sourceforge.net/'
-  url 'http://downloads.sourceforge.net/project/mrbayes/mrbayes/3.2.2/mrbayes-3.2.2.tar.gz'
-  sha1 '6f469f595a3dbd2f8394cb29bc70ca1773338ac8'
+  homepage "http://mrbayes.sourceforge.net/"
+  # tag "bioinformatics"
+  # doi "10.1093/bioinformatics/btg180"
 
-  head 'https://mrbayes.svn.sourceforge.net/svnroot/mrbayes/trunk/'
+  url "https://downloads.sourceforge.net/project/mrbayes/mrbayes/3.2.5/mrbayes-3.2.5.tar.gz"
+  sha256 "31309af428fb52208af4663ddad38b6ff120fe8e7cedd75cf50818f59eb49000"
 
-  option 'with-beagle', 'Build with BEAGLE library support'
-  option 'with-mpi', 'Build with MPI parallel support'
+  head "https://mrbayes.svn.sourceforge.net/svnroot/mrbayes/trunk/"
 
-  depends_on :autoconf => :build
-  depends_on :automake => :build
+  bottle do
+    cellar :any
+    sha256 "72e4f76b89c9ba2af17053982eb70ceb4be5abc08b51fc064cba29afb62eb295" => :yosemite
+    sha256 "93d5d55f6eed5e6bbeb9a1a012b33ec6901b55fb5f5187d44b4ba66070494446" => :mavericks
+    sha256 "8056f58206496186e970b1f91508fd6741dc6f8087f6ad9db50a285f333c326a" => :mountain_lion
+  end
+
+  option "with-beagle", "Build with BEAGLE library support"
+
+  depends_on "autoconf" => :build
+  depends_on "automake" => :build
   depends_on :mpi => [:cc, :optional]
-  depends_on 'beagle' => :optional
+  depends_on "beagle" => :optional
 
   fails_with :llvm do
     build 2336
@@ -22,23 +29,10 @@ class Mrbayes < Formula
 
   def install
     args = ["--disable-debug", "--prefix=#{prefix}"]
+    args << "--with-beagle=" + ((build.with? "beagle") ? "#{Formula["beagle"].opt_prefix}" : "no")
+    args << "--enable-mpi="  + ((build.with? "mpi") ? "yes" : "no")
 
-    if build.with? 'beagle'
-      args << "--with-beagle=#{Formula.factory('beagle').opt_prefix}"
-    else
-      args << "--with-beagle=no"
-    end
-
-    if build.include? 'with-mpi'
-      # Open-mpi builds only with llvm-gcc due to a bug (see open-mpi formula)
-      # therefore open-mpi attempts to run llvm-gcc instead of clang.
-      # But MrBayes hangs with llvm-gcc!
-      # https://sourceforge.net/tracker/index.php?func=detail&aid=3426528&group_id=129302&atid=714418
-      ENV['OMPI_CC'] = ENV.cc
-      args << "--enable-mpi=yes"
-    end
-
-    cd 'src' do
+    cd "src" do
       system "autoconf"
       system "./configure", *args
       system "make"
@@ -46,7 +40,7 @@ class Mrbayes < Formula
     end
 
     # Doc and examples are not included in the svn
-    (share/'mrbayes').install ['documentation', 'examples'] unless build.head?
+    (share/"mrbayes").install ["documentation", "examples"] unless build.head?
   end
 
   def caveats
@@ -58,7 +52,7 @@ class Mrbayes < Formula
     end
   end
 
-  def test
-    system "echo 'version' | #{bin}/mb"
+  test do
+    pipe_output(bin/"mb", "Execute #{share}/mrbayes/examples/finch.nex")
   end
 end

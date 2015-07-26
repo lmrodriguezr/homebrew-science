@@ -1,33 +1,43 @@
-require 'formula'
-
 class AdolC < Formula
-  homepage 'https://projects.coin-or.org/ADOL-C'
-  url 'http://www.coin-or.org/download/source/ADOL-C/ADOL-C-2.3.0.tgz'
-  sha1 'd9124ce0b199cb8b841a9a9ec10d1fb31ed11b49'
+  homepage "https://projects.coin-or.org/ADOL-C"
+  url "http://www.coin-or.org/download/source/ADOL-C/ADOL-C-2.5.2.tgz"
+  sha1 "6a17cb179dcbc59edc45c97b8928a2ebfa1e2c38"
 
-  head 'https://projects.coin-or.org/svn/ADOL-C/trunk/', :using => :svn
+  bottle do
+    revision 1
+    sha256 "5905ef5d9019122e20139820eee3a9da55f5260300d7eb9a77863837c70cfd57" => :yosemite
+    sha256 "d416356ba3c00b9dadd4ef547ffcbe011c24b0a97fc9fb8ee6b0dcb283a07998" => :mavericks
+    sha256 "ddd86b44e40b432df17e909b02d429eac9b219311c96de6f851eac79c7dd0751" => :mountain_lion
+  end
 
-  depends_on 'colpack'
+  head "https://projects.coin-or.org/svn/ADOL-C/trunk/", :using => :svn
+
+  depends_on "autoconf" => :build
+  depends_on "automake" => :build
+  depends_on "libtool" => :build
+  depends_on "colpack" => :recommended
+
+  needs :cxx11
 
   def install
-    # Make our own realpath script
-    (buildpath/'realpath').write <<-EOS.undent
-      #!/usr/bin/python
-      import os,sys
-      print os.path.realpath(sys.argv[1])
-    EOS
-    system "chmod +x ./realpath"
+    ENV.cxx11
 
-    # Configure may get automatically regenerated.  So patch configure.ac also.
-    inreplace %w(configure configure.ac) do |s|
-      s.gsub! "readlink -f", "/#{buildpath}/realpath"
+    # Configure may get automatically regenerated. So patch configure.ac.
+    inreplace %w[configure configure.ac] do |s|
       s.gsub! "lib64", "lib"
     end
 
-    system "./configure", "--prefix=#{prefix}",
-                          "--enable-sparse",
-                          "--with-colpack=#{HOMEBREW_PREFIX}"
-    system "make install"
-    system "make test"
+    args =  ["--prefix=#{prefix}", "--enable-sparse"]
+    args << "--with-colpack=#{Formula["colpack"].opt_prefix}" if build.with? "colpack"
+    args << "--with-openmp-flag=-fopenmp" if ENV.compiler != :clang
+    args << "--enable-ulong" if MacOS.prefer_64_bit?
+
+    ENV.append_to_cflags "-I#{buildpath}/ADOL-C/include/adolc"
+    system "./configure", *args
+    system "make", "install"
+    system "make", "test"
+
+    # move config.h to include as some packages require this info
+    (include/"adolc").install "ADOL-C/src/config.h"
   end
 end

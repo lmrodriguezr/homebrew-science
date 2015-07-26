@@ -1,50 +1,50 @@
-require 'formula'
-
 class UcscGenomeBrowser < Formula
-  homepage 'http://genome.ucsc.edu'
-  url 'http://hgdownload.cse.ucsc.edu/admin/jksrc.v295.zip'
-  sha1 'f3853d4aab5c67dfd6a64bfd869261812fab1b19'
-  head 'git://genome-source.cse.ucsc.edu/kent.git'
+  desc "A mirror of the UCSC Genome Browser"
+  homepage "http://genome.ucsc.edu"
+  # doi "10.1093/nar/gkq963"
+  # tag "bioinformatics"
+
+  url "http://hgdownload.cse.ucsc.edu/admin/jksrc.v316.zip"
+  sha256 "8ad7d11c776c52abc69557f393cb0df38c79efc8875a1f0652928ca0e8240f72"
+  head "git://genome-source.cse.ucsc.edu/kent.git"
 
   keg_only <<-EOF.undent
     The UCSC Genome Browser installs many commands, and some conflict
     with other packages.
   EOF
 
-  depends_on :libpng
+  depends_on "libpng"
   depends_on :mysql
+  depends_on "openssl"
 
   def install
-    # Patch for OSX cp, fixed in HEAD
-    inreplace "src/hg/js/makefile", "cp -p --update", "rsync -a" unless build.head?
-
     ENV.j1
     machtype = `uname -m`.chomp
     user = `whoami`.chomp
     mkdir prefix/"cgi-bin-#{user}"
     mkdir prefix/"htdocs-#{user}"
-    cd 'src/lib' do
-      system 'make', "MACHTYPE=#{machtype}"
+    cd "src/lib" do
+      system "make", "MACHTYPE=#{machtype}"
     end
-    cd 'src/jkOwnLib' do
-      system 'make', "MACHTYPE=#{machtype}"
+    cd "src/jkOwnLib" do
+      system "make", "MACHTYPE=#{machtype}"
     end
-    cd 'src' do
-      system 'make',
+    cd "src" do
+      system "make",
         "MACHTYPE=#{machtype}",
         "BINDIR=#{bin}",
-        "SCRIPTS=#{bin}/scripts",
+        "SCRIPTS=#{prefix}/scripts",
         "CGI_BIN=#{prefix}/cgi-bin",
         "DOCUMENTROOT=#{prefix}/htdocs",
-        "PNGLIB=-L#{HOMEBREW_PREFIX}/lib -lpng",
+        "PNGLIB=-L#{Formula["libpng"].opt_lib} -lpng",
         "MYSQLLIBS=-lmysqlclient -lz",
-        "MYSQLINC=#{HOMEBREW_PREFIX}/include/mysql"
+        "MYSQLINC=#{Formula["mysql"].opt_include}/mysql"
     end
-    mv "#{prefix}/cgi-bin-#{user}", prefix/'cgi-bin'
-    mv "#{prefix}/htdocs-#{user}", prefix/'htdocs'
+    mv "#{prefix}/cgi-bin-#{user}", prefix/"cgi-bin"
+    mv "#{prefix}/htdocs-#{user}", prefix/"htdocs"
   end
 
-  # Todo: Best would be if this formula would put a complete working
+  # TODO: Best would be if this formula would put a complete working
   #       apache virtual site into #{share} and instruct the user to just
   #       do a symlink.
   def caveats; <<-EOF.undent
@@ -76,5 +76,14 @@ class UcscGenomeBrowser < Formula
 
       Point your browser to http://localhost/cgi-bin/hgGateway
     EOF
+  end
+
+  test do
+    (testpath/"test.fa").write <<-EOF.undent
+      >test
+      ACTG
+    EOF
+    system "#{bin}/faOneRecord test.fa test > out.fa"
+    compare_file "test.fa", "out.fa"
   end
 end
