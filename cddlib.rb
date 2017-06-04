@@ -1,14 +1,17 @@
 class Cddlib < Formula
+  desc "Double description method for general polyhedral cones"
   homepage "http://www.inf.ethz.ch/personal/fukudak/cdd_home/"
-  url "ftp://ftp.ifor.math.ethz.ch/pub/fukuda/cdd/cddlib-094g.tar.gz"
-  mirror "http://www.mirrorservice.org/sites/distfiles.finkmirrors.net/cddlib-094g.tar.gz"
-  sha256 "af1b81226514abf731800e2e104def8a7274817d7e645693f8b99fc2b1432155"
+  url "ftp://ftp.math.ethz.ch/users/fukudak/cdd/cddlib-094h.tar.gz"
+  sha256 "fe6d04d494683cd451be5f6fe785e147f24e8ce3ef7387f048e739ceb4565ab5"
+  # doi "math"
+  # doi "10.1007/3-540-61576-8_77"
 
   bottle do
     cellar :any
-    sha256 "0017f86e0256835b7bdfc2e09f711ecf406a4024a192d13c4f71aaf88b8d7a05" => :yosemite
-    sha256 "6e9826434d6d65332469e39cd4afb3069400786d16f0e9224a910070f260a76f" => :mavericks
-    sha256 "2643cad2d5286a6a17d8b1252b2d607983f8e542c84daed5f7fdf2ed17404594" => :mountain_lion
+    sha256 "6ea3afa298bb082bf41e0bfd90759b4b4f0ee02736473d0c08a3ee8f211179e4" => :sierra
+    sha256 "74ba8c0e0191e3f26d3d5bf8b28c0fabddeffade51a4ae8b07df5e0d72c144c4" => :el_capitan
+    sha256 "831968c40009b3450ceffe1c4abd2734e566a724ff6795265db7719cf6ea596b" => :yosemite
+    sha256 "1359fc080fedfb2f956bb5114a47749031d3bdfbbd978edc119ebdeca1eb7507" => :x86_64_linux
   end
 
   depends_on "gmp"
@@ -18,6 +21,10 @@ class Cddlib < Formula
                           "--prefix=#{prefix}"
     system "make", "install"
     doc.install Dir["doc/*"]
-    (share/"cddlib").install Dir["examples*"]
+    pkgshare.install Dir["examples*"]
+  end
+
+  test do
+    system "#{bin}/testshoot"
   end
 end

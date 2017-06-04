@@ -1,77 +1,92 @@
 class Opencascade < Formula
-  homepage "http://www.opencascade.org/"
-  url "http://files.opencascade.com/OCCT/OCC_6.8.0_release/opencascade-6.8.0.tgz"
-  sha1 "fe359a12e110e9136adac2db1539026be6cc579e"
+  desc "3D modeling and numerical simulation software for CAD/CAM/CAE"
+  homepage "https://dev.opencascade.org/"
+  url "https://github.com/FreeCAD/homebrew-freecad/releases/download/0/opencascade-7.1.0.tgz"
+  sha256 "8aaf1e29edc791ad611172dcbcc6efa35ada1e02a5eb7186a837131f85231d71"
+  revision 1
 
   bottle do
     cellar :any
-    revision 1
-    sha256 "156c57d3345600ba9911dfbe9844bb36cd86e55b07669562c2010e222c411e63" => :yosemite
-    sha256 "b8b1ebb93e0bb650a0984ce684659ac188685ebdf0426811bd7353edd2cb1c60" => :mavericks
-    sha256 "47555cbfe72c5929b303becec9fb555271fc4a0887f672f04370eede0b4ebeeb" => :mountain_lion
+    sha256 "e817f05ac747235d8453a2d15fb076f90f87b30a872ff6944cc5487f05058cbe" => :sierra
+    sha256 "9be44acf5036801dda4981b48693312f7cba3daffa73e80c50ea207a9da7407e" => :el_capitan
+    sha256 "790964a5e17e0021228f03b32bdabdc1657aa89aa56f668d8b998ec5f1ce42bc" => :yosemite
+    sha256 "5ef4d49225c00242f5ab1cc04804f3d4b931c2fc82713c4a9457e57c50f94c33" => :x86_64_linux
+  end
+
+  option "without-opencl", "Build without OpenCL support" if OS.mac?
+  option "with-extras", "Install documentation (~17 MB), source files (~113 MB), samples and templates"
+  option "with-test", "Install tests (~55MB)"
+  deprecated_option "with-tests" => "with-test"
+
+  depends_on "cmake" => :build
+  depends_on "freetype"
+  depends_on "freeimage" => :recommended
+  depends_on "tbb"       => :recommended
+  depends_on "gl2ps"     => :recommended if OS.mac? # Not yet available in Linuxbrew
+  depends_on "doxygen"   if build.with? "extras"
+  depends_on :macos      => :snow_leopard
+
+  unless OS.mac?
+    depends_on :x11
+    depends_on "tcl-tk"
+    depends_on "linuxbrew/xorg/mesa"
   end
 
   conflicts_with "oce", :because => "OCE is a fork for patches/improvements/experiments over OpenCascade"
 
-  option "without-opencl", "Build without OpenCL support"
-  option "without-extras", "Don't install documentation (~725MB) or samples (~40MB)"
-  option "with-tests", "Install tests (~55MB)"
-
-  depends_on "cmake" => :build
-  depends_on "freetype"
-  depends_on "qt"
-  depends_on "freeimage" => :recommended
-  depends_on "gl2ps" => :recommended
-  depends_on "tbb" => :recommended
-  depends_on :macos => :snow_leopard
-
   def install
-    # setting DYLD causes many issues; all tests work fine without; suppress
-    inreplace "env.sh", "export DYLD_LIBRARY_PATH", "export OCCT_DYLD_LIBRARY_PATH"
-
     cmake_args = std_cmake_args
     cmake_args << "-DCMAKE_PREFIX_PATH:PATH=#{HOMEBREW_PREFIX}"
     cmake_args << "-DCMAKE_INCLUDE_PATH:PATH=#{HOMEBREW_PREFIX}/lib"
-    cmake_args << "-DCMAKE_FRAMEWORK_PATH:PATH=#{HOMEBREW_PREFIX}/Frameworks"
-    cmake_args << "-DINSTALL_DIR:PATH=#{prefix}"
     cmake_args << "-D3RDPARTY_DIR:PATH=#{HOMEBREW_PREFIX}"
-    cmake_args << "-D3RDPARTY_TCL_DIR:PATH=/usr"
-    cmake_args << "-D3RDPARTY_TK_INCLUDE_DIR:PATH=/usr/include"
     cmake_args << "-DINSTALL_TESTS:BOOL=ON" if build.with? "tests"
     cmake_args << "-D3RDPARTY_TBB_DIR:PATH=#{HOMEBREW_PREFIX}" if build.with? "tbb"
-
-    # must specify, otherwise finds old ft2config.h in /usr/X11R6
-    cmake_args << "-D3RDPARTY_FREETYPE_INCLUDE_DIR:PATH=#{HOMEBREW_PREFIX}/include/freetype2"
 
     %w[freeimage gl2ps opencl tbb].each do |feature|
       cmake_args << "-DUSE_#{feature.upcase}:BOOL=ON" if build.with? feature
     end
 
-    opencl_path = Pathname.new "/System/Library/Frameworks/OpenCL.framework/Versions/Current"
-    if build.with?("opencl") && opencl_path.exist?
-      cmake_args << "-D3RDPARTY_OPENCL_INCLUDE_DIR:PATH=#{opencl_path}/Headers"
-      cmake_args << "-D3RDPARTY_OPENCL_DLL:FILEPATH=#{opencl_path}/Libraries/libcl2module.dylib"
-
-      # link against the Apple built-in OpenCL Framework
-      # inreplace "adm/cmake/TKOpenGL/CMakeLists.txt", "list( APPEND TKOpenGl_USED_LIBS OpenCL )", <<-EOF.undent
-      #  find_library(FRAMEWORKS_OPENCL NAMES OpenCL)
-      #  list( APPEND TKOpenGl_USED_LIBS ${FRAMEWORKS_OPENCL} )
-      # EOF
+    if OS.mac?
+      sdk_path = Pathname.new `xcrun --show-sdk-path`.strip
+      cmake_args << "-D3RDPARTY_TCL_DIR:PATH=/usr"
+      cmake_args << "-D3RDPARTY_TCL_INCLUDE_DIR:PATH=#{sdk_path}/usr/include/"
+      cmake_args << "-D3RDPARTY_TK_INCLUDE_DIR:PATH=#{sdk_path}/usr/include/"
+      cmake_args << "-DCMAKE_FRAMEWORK_PATH:PATH=#{HOMEBREW_PREFIX}/Frameworks"
+      cmake_args << "-D3RDPARTY_FREETYPE_INCLUDE_DIR:PATH=#{HOMEBREW_PREFIX}/include/freetype2"
+      opencl_path = Pathname.new "#{sdk_path}/System/Library/Frameworks/OpenCL.framework/Versions/Current"
+      if build.with?("opencl") && opencl_path.exist?
+        cmake_args << "-D3RDPARTY_OPENCL_INCLUDE_DIR:PATH=#{opencl_path}/Headers"
+        cmake_args << "-D3RDPARTY_OPENCL_DLL:FILEPATH=#{opencl_path}/Libraries/libcl2module.dylib"
+      end
+    else
+      cmake_args << "-D3RDPARTY_TCL_DIR:PATH=#{Formula["tcl-tk"].prefix}"
+      cmake_args << "-D3RDPARTY_TCL_INCLUDE_DIR:PATH=#{HOMEBREW_PREFIX}/include"
+      cmake_args << "-D3RDPARTY_TK_INCLUDE_DIR:PATH=#{HOMEBREW_PREFIX}/include"
     end
 
-    system "cmake", ".", *cmake_args
-    system "make", "install"
-
     if build.with? "extras"
-      # 6.7.1 now installs samples/tcl by default, must move back before moving all
-      mv prefix/"samples/tcl", "samples/tcl"
-      rmdir prefix/"samples"
-      prefix.install "doc", "samples"
+      cmake_args << "-DINSTALL_SAMPLES=ON"
+      cmake_args << "-DINSTALL_DOC_Overview:BOOL=ON"
+    end
+
+    mkdir "build" do
+      system "cmake", "..", *cmake_args
+      system "make", "install"
+
+      if build.with? "extras"
+        prefix.install "../src"
+        prefix.install "../adm"
+        share.install_symlink prefix/"adm"
+      else
+        # Some apss expect resoures in legacy ${CASROOT}/src directory
+        cd prefix do
+          ln_s "share/opencascade/resources", "src"
+        end
+      end
     end
 
     # add symlinks to be able to compile against OpenCascade
-    loc = "#{prefix}/mac64/clang"
-    include.install_symlink Dir["#{prefix}/inc/*"]
+    loc = OS.mac? ? "#{prefix}/mac64/clang" : "#{prefix}/lin64/gcc"
     bin.install_symlink Dir["#{loc}/bin/*"]
     lib.install_symlink Dir["#{loc}/lib/*"]
   end

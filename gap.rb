@@ -1,16 +1,16 @@
 class Gap < Formula
-  desc "A system for computational discrete algebra"
-  homepage "http://www.gap-system.org/"
-  url "ftp://ftp.gap-system.org/pub/gap/gap47/tar.bz2/gap4r7p8_2015_06_09-20_27.tar.bz2"
-  version "4.7.8"
-  sha256 "d1643d0258a0cb037acbe132aacf888bc2b832afb9c4a284d27310c5ad07233e"
+  desc "System for computational discrete algebra"
+  homepage "https://www.gap-system.org/"
+  url "https://www.gap-system.org/pub/gap/gap48/tar.bz2/gap4r8p7_2017_03_24-21_21.tar.bz2"
+  version "4.8.7"
+  sha256 "d073cafa191df93c7d034218956058d583c5d0df05b6bb274a3952e439af9cc3"
 
   bottle do
     cellar :any
-    revision 1
-    sha256 "9cc07fdd9990c6e04f43862718bd90998bc0ba9db750c7cfdb05c8262f00732e" => :yosemite
-    sha256 "f35ba8cd877309d5cea6017f01212ad51dd1204c55041e46b335388ed3c4aedd" => :mavericks
-    sha256 "6606679d504c8bf527afe5f97177a35e9bfe1381fa207d6837374b2f5de19fd0" => :mountain_lion
+    sha256 "e91e2541a5c38d69d6bdd63320f0fe9a88469c860daf1cd4c9fc560502b74d9a" => :sierra
+    sha256 "acb47315544f0d9d58bd82d1ae23864e773cf07240c5be81ecaa2a1406c86e10" => :el_capitan
+    sha256 "60bf829478aeeaeb68d62a17db4cb216338244ca242a918dadebeea3a9ab341b" => :yosemite
+    sha256 "aba04a60d92f3dade018979c00250434ad416e1821da8d73a51e5228a7e3ef24" => :x86_64_linux
   end
 
   # NOTE:  the archive contains the [GMP library](http://gmplib.org) under
@@ -18,8 +18,10 @@ class Gap < Formula
   #   with Homebrew), and a number of GAP packages under `pkg/`, some of
   #   which need to be built.
 
-  option "with-InstPackages",
-         "Try to build included packages using InstPackages script"
+  option "with-packages",
+         "Try to build included packages using BuildPackages script"
+
+  deprecated_option "with-InstPackages" => "with-packages"
 
   depends_on "gmp"
   # NOTE:  A version of [GMP](https://gmplib.org) is included in GAP archive
@@ -27,13 +29,6 @@ class Gap < Formula
   #   See http://www.gap-system.org/Download/INSTALL for details.
 
   depends_on "readline" => :recommended
-
-  INST_PACKAGES_SCRIPT_URL = "http://www.gap-system.org/Download/InstPackages.sh"
-
-  resource "script_that_builds_included_packages" do
-    url INST_PACKAGES_SCRIPT_URL
-    sha256 "2749cc6736bde594f3dc35bbbb644511efc18c83991d07fbac15f86b7d986505"
-  end
 
   def install
     # Remove some useless files
@@ -70,14 +65,9 @@ class Gap < Formula
     # is being set to the (temporary) build directory, but should be set to
     # the value of `--prefix` option.
     ["bin/gap-default32.sh", "bin/gap-default64.sh"].each do |startup_script|
-      if File.exist?(startup_script)
-        # Replace `/foo/bar` in `GAP_DIR="/foo/bar"` in the startup script
-        #
-        # XXX: no lookbehind assertion is used in the regex to remain
-        #   compatible with Ruby 1.8
-        inreplace startup_script, /^GAP_DIR="[^"]*"$/,
-                                  "GAP_DIR=\"#{libexec}\""
-      end
+      next unless File.exist?(startup_script)
+      inreplace startup_script, /^GAP_DIR="[^"]*"$/,
+                                        "GAP_DIR=\"#{libexec}\""
     end
 
     system "make"
@@ -90,18 +80,12 @@ class Gap < Formula
       bin.install_symlink File.expand_path(`readlink -n gap.sh`) => "gap"
     end
 
-    if build.with? "InstPackages"
+    if build.with? "packages"
       ohai "Trying to automatically build included packages"
-
-      resource("script_that_builds_included_packages").stage do
-        chmod "u+x", "InstPackages.sh"
-        (libexec/"pkg").install "InstPackages.sh"
-      end
-
       cd libexec/"pkg" do
         # NOTE:  running this script is known to produce a number of error
         #   messages, possibly failing to build certain packages
-        system "./InstPackages.sh"
+        system "../bin/BuildPackages.sh"
       end
     end
   end
@@ -109,22 +93,22 @@ class Gap < Formula
   # XXX:  `brew info` displays the caveats according to the options it is
   #   given, not according to the options with which the formula is installed
   def caveats
-    if build.without?("InstPackages")
+    if build.without?("packages")
       <<-EOS.undent
-        If the formula is installed without the `--with-InstPackages' option,
+        If the formula is installed without the `--with-packages' option,
         some packages in:
           #{libexec/"pkg"}
         will need to be built manually with the following script:
-          #{INST_PACKAGES_SCRIPT_URL}
+          #{libexec/"bin/BuildPackages.sh"}
         See the Section 7 of #{libexec/"INSTALL"} for more info.
       EOS
     else
       <<-EOS.undent
-        When the formula is installed with the `--with-InstPackages' option,
+        When the formula is installed with the `--with-packages' option,
         some packages in
           #{libexec/"pkg"}
         are automatically built using the following script:
-          #{INST_PACKAGES_SCRIPT_URL}
+          #{libexec/"bin/BuildPackages.sh"}
         However, this script is known to produce a number of error messages,
         and thus it might have failed to build certain packages.
       EOS

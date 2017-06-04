@@ -1,31 +1,30 @@
 class Armadillo < Formula
-  homepage "http://arma.sourceforge.net/"
-  url "https://downloads.sourceforge.net/project/arma/armadillo-5.200.1.tar.gz"
-  sha256 "3673fc7cbeefca826108efe7c36e21322f259809f874c161ca284a114fb7f693"
+  desc "C++ linear algebra library"
+  homepage "https://arma.sourceforge.io/"
+  url "https://downloads.sourceforge.net/project/arma/armadillo-7.950.0.tar.xz"
+  sha256 "da89281959d48c60ce546dd370ef712ec1e24714e1e9afadad17dd2fbbc5876e"
 
   bottle do
-    sha256 "b7ba1ac68d71bc8e91e2460d8f24174cd45df10488310f5625b7697c07f0c25a" => :yosemite
-    sha256 "4972dd99d18c8fd9336b6ffc4434c70b6cd5a5c52224c0764eaee2c546e7440e" => :mavericks
-    sha256 "cdbd4f24faf7d05b5abb7230ba4df222d5aeb853b69fb3596999e7a5b1e7f0c5" => :mountain_lion
+    cellar :any
+    sha256 "0dc626e12308d1cc3aefff4078cfc03d6cf750adcd5636c10664994bec215f61" => :sierra
+    sha256 "30218dcb0043e75d0b603887826cfed44b3ba10cdc45054f8d1611fd13ee6a6f" => :el_capitan
+    sha256 "e0f61540787645ce3fd7abd2fc993d417091b95495267627c7aa2d97f39e790e" => :yosemite
+    sha256 "175666d90840aa0f9110203a10e327a8b819006fe35b0c1e26114018a5056d82" => :x86_64_linux
   end
 
-  option "with-hdf5", "Enable the ability to save and load matrices stored in the HDF5 format"
+  option :cxx11
 
   depends_on "cmake" => :build
+  depends_on "pkg-config" => :build
   depends_on "arpack"
+  depends_on "hdf5"
   depends_on "superlu"
-  depends_on "hdf5" => :optional
   depends_on "openblas" if OS.linux?
-
-  option :cxx11
 
   def install
     ENV.cxx11 if build.cxx11?
 
-    args = std_cmake_args
-    args << "-DDETECT_HDF5=ON" if build.with? "hdf5"
-
-    system "cmake", ".", *args
+    system "cmake", ".", "-DDETECT_HDF5=ON", *std_cmake_args
     system "make", "install"
 
     prefix.install "examples"

@@ -1,26 +1,25 @@
 class Xraylib < Formula
+  desc "Library for interactions of X-rays with matter"
   homepage "https://github.com/tschoonj/xraylib"
-  desc "A library for X-ray-matter interaction fundamental parameters"
-  url "http://lvserver.ugent.be/xraylib/xraylib-3.1.0.tar.gz"
-  mirror "https://xraylib.s3.amazonaws.com/xraylib-3.1.0.tar.gz"
-  sha256 "61a7c7fd0a911562151422bc6ca77df8beba37ec4e337765cf60dfbe1e04a1e3"
+  url "https://xraylib.tomschoonjans.eu/xraylib-3.2.0.tar.gz"
+  sha256 "a734a0ea7b8224918f4e2105a4cf6c63664f257c1940a4c633beedf470d1576b"
 
   bottle do
-    revision 2
-    sha256 "363c11159efb91d7e4d0756047d5d7602835ac29eaa9a4ba5356efa1c5ff6a56" => :yosemite
-    sha256 "6955f883661c1d1b95cedd856728dd39bdafb76c96a62e36ae98956314d80d0f" => :mavericks
-    sha256 "70ff54f9574e1a4bbea115fdae1fe6ec407dfb52338ba9765cd4a45e1e40964b" => :mountain_lion
+    rebuild 2
+    sha256 "2c010e409880ab0f9e2c86fe3cddca1a028ea7b695359f328a7a6ae0af99d51d" => :sierra
+    sha256 "c372396866507e3eb30ee4950cb83c8cbd089287b6ffea93f0e40bccbbdcaf80" => :el_capitan
+    sha256 "6acb5ff796a02dcbbf2d1d9aad0168a33b00f2dbca469aecc4e34a5030004134" => :yosemite
+    sha256 "a533de98b85eb17feab453688399468e56f104bd6d994920465d1312b7330997" => :x86_64_linux
   end
 
   option "with-perl", "Build with perl support"
   option "with-ruby", "Build with ruby support"
-  option "without-check", "Disable build-time checking (not recommended)"
 
+  depends_on :fortran => :recommended
   depends_on :python => :recommended
   depends_on :python3 => :optional
-  depends_on :fortran => :optional
   depends_on "lua" => :optional
-  depends_on :java  => :optional
+  depends_on "fpc" => :optional
 
   depends_on "swig" => :build
 
@@ -32,26 +31,27 @@ class Xraylib < Formula
       --disable-idl
       --disable-python-numpy
       --disable-php
+      --disable-java
     ]
 
     args << ((build.with? "fortran") ? "--enable-fortran2003" : "--disable-fortran2003")
     args << ((build.with? "perl") ? "--enable-perl" : "--disable-perl")
     args << ((build.with? "lua") ? "--enable-lua" : "--disable-lua")
     args << ((build.with? "ruby") ? "--enable-ruby" : "--disable-ruby")
-    args << ((build.with? "java") ? "--enable-java" : "--disable-java")
+    args << ((build.with? "pascal") ? "--enable-pascal" : "--disable-pascal")
+
+    ENV.delete "PYTHONPATH"
 
     if build.without?("python") && build.with?("python3")
       args << "--enable-python"
       args << "PYTHON=python3"
       system "./configure", *args
       system "make"
-      system "make", "check" if build.with? "check"
       system "make", "install"
     elsif build.with?("python") && build.without?("python3")
       args << "--enable-python"
       system "./configure", *args
       system "make"
-      system "make", "check" if build.with? "check"
       system "make", "install"
     elsif build.with?("python3")
       # build for both python2 and python3 bindings
@@ -77,7 +77,6 @@ class Xraylib < Formula
       end
       # build without python first
       system "make"
-      system "make", "check" if build.with? "check"
       # move the configured python directories to the main build dir
       mv "../xraylib-#{version}-python2/python", "python2"
       mv "../xraylib-#{version}-python3/python", "python3"
@@ -104,7 +103,6 @@ class Xraylib < Formula
       args << "--disable-python"
       system "./configure", *args
       system "make"
-      system "make", "check" if build.with? "check"
       system "make", "install"
     end
   end

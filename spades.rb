@@ -1,36 +1,41 @@
-require 'formula'
-
 class Spades < Formula
+  desc "SPAdes: de novo genome assembly"
   homepage "http://bioinf.spbau.ru/spades/"
-  #tag "bioinformatics"
-  #doi "10.1089/cmb.2012.0021"
-
-  url "http://spades.bioinf.spbau.ru/release3.5.0/SPAdes-3.5.0.tar.gz"
-  sha1 "cca0dde2acb21854e9a87b0ace9ac3e08da55202"
+  url "http://cab.spbu.ru/files/release3.10.1/SPAdes-3.10.1.tar.gz"
+  sha256 "d49dd9eb947767a14a9896072a1bce107fb8bf39ed64133a9e2f24fb1f240d96"
+  revision 1
+  # tag "bioinformatics"
+  # doi "10.1089/cmb.2012.0021"
 
   bottle do
     cellar :any
-    sha1 "9a1c20f1088872cc813d160f6bdf9e62b2670818" => :yosemite
-    sha1 "c379f3bfdce510a95fb5fd4b6a5678988c48b77a" => :mavericks
-    sha1 "92f6aba80bc8b969ffb30a5360db77da5be8e860" => :mountain_lion
+    sha256 "ad1f80d0722109efe87a053d43ef5ba3a266be3dcd2899edd6abbe75f8c989e4" => :sierra
+    sha256 "bffe851df6bad623bf132a3b51c0f3f9e8629d4629cf91bd76f558232860442a" => :el_capitan
+    sha256 "3d4f42efafd5935e69e2b9fd1cabba88ce13f1b243e780e809f0459077d8bc8e" => :yosemite
+    sha256 "6615043c914a00e88e446cb95ab0143c6c3920934f9ec941af0cb50ac7f01403" => :x86_64_linux
   end
 
-  depends_on 'cmake' => :build
+  depends_on "cmake" => :build
+  depends_on "gcc"
+  depends_on :python if OS.linux?
+
+  needs :openmp
+
+  fails_with :gcc => "4.7" do
+    cause "Compiling SPAdes requires GCC >= 4.7 for OpenMP 3.1 support"
+  end
 
   def install
-    mkdir 'src/build' do
-      system 'cmake', '..', *std_cmake_args
-      system 'make', 'install'
-    end
+    inreplace "src/common/utils/segfault_handler.hpp",
+              /(#include <signal.h>)/, "\\1\n#include <functional>"
 
-    # Fix the audit error "Non-executables were installed to bin"
-    inreplace bin/"spades_init.py" do |s|
-      s.sub! /^/, "#!/usr/bin/env python\n"
+    mkdir "src/build" do
+      system "cmake", "..", *std_cmake_args
+      system "make", "install"
     end
   end
 
   test do
-    system "spades.py", "--test"
-    rm bin/"spades_init.pyc"
+    system "#{bin}/spades.py", "--test"
   end
 end

@@ -1,15 +1,16 @@
 class Glpk < Formula
+  desc "Library for Linear (LP) and Mixed-Integer Programming (MIP)"
   homepage "https://www.gnu.org/software/glpk/"
-  url "http://ftpmirror.gnu.org/glpk/glpk-4.52.tar.gz"
-  mirror "https://ftp.gnu.org/gnu/glpk/glpk-4.52.tar.gz"
-  sha1 "44b30b0de777a0a07e00615ac6791af180ff4d2c"
+  url "https://ftpmirror.gnu.org/glpk/glpk-4.61.tar.gz"
+  mirror "https://ftp.gnu.org/gnu/glpk/glpk-4.61.tar.gz"
+  sha256 "9866de41777782d4ce21da11b88573b66bb7858574f89c28be6967ac22dfaba9"
 
   bottle do
     cellar :any
-    revision 1
-    sha256 "5467bd20c061d10636c32f374ad7c5dc8860d6bf34397151d8b582a673899eab" => :yosemite
-    sha256 "413cd402b36f22e10ed189a61ae7b3348e5971468bfd039555fdab11fbe5bd0a" => :mavericks
-    sha256 "52662e843e0ebafe16c1d7dd5e852a30aab8d4bc4f77de60ad12055d91fa459e" => :mountain_lion
+    sha256 "4f03fce647763acf07b4d7b158fc1c10d324ccc3e3536cd8f3cf3fcfbe312d13" => :sierra
+    sha256 "13e284d8a723a54617ffa3f61114070833d7d6b21848fecdfe6a1175893bbebc" => :el_capitan
+    sha256 "4a9997de364745c6a6c063773078a9e34865a81aea65c45d8443f01794fd5798" => :yosemite
+    sha256 "4cabdd425931cbabbce332bd74ab787fa6c54745771dc0f9cacab3a69748bddc" => :x86_64_linux
   end
 
   depends_on "gmp" => :recommended
@@ -34,7 +35,7 @@ class Glpk < Formula
         return 0;
     }
     EOF
-    system ENV.cc, "test.c", "-lglpk", "-o", "test"
-    assert_equal `./test`, version.to_s
+    system ENV.cc, "test.c", "-L#{lib}", "-I#{include}", "-lglpk", "-o", "test"
+    assert_match version.to_s, shell_output("./test")
   end
 end

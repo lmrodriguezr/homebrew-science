@@ -1,43 +1,40 @@
 class Swetest < Formula
-  homepage "http://www.astro.com/swisseph/"
-  url "http://www.astro.com/ftp/swisseph/swe_unix_src_2.01.00.tar.gz"
-  sha256 "bd601d5e7982926a291eb6ed50ef846f85412411ebdc2a7ae67dbd200f952289"
+  homepage "https://www.astro.com/swisseph/"
+  url "https://www.astro.com/ftp/swisseph/swe_unix_src_2.06.tar.gz"
+  sha256 "e2e3ac2cee53b38865b071f6d86ae0a05e0f608fbf3acc569104589d5a23576f"
 
   bottle do
-    sha256 "4c8d6ac3424b55faa73f1ff35f8abd95cd7497aa9e8740c92d902af17ba6e2e1" => :yosemite
-    sha256 "d1fb07a32fe088ce708d31770ba9bc506b93cc3f03be9c915a2b414f0d98ef1b" => :mavericks
-    sha256 "2e10f551bec64b7e2437fc4a1da2d4c7e62001bbdd663b407b5b25ba60651ccb" => :mountain_lion
+    sha256 "9f4505f1cad7674e45f4e01f7a8897ae82f876cd99e93519a9c11f424c598e3e" => :sierra
+    sha256 "0a0448ef411bf683adcb425a8abfae4c2d5c10ef788c4ee6b6835672313490e5" => :el_capitan
+    sha256 "0224a908fb30d63663c06e73be5b2040802982c0c07005adf1b955664e60856e" => :yosemite
+    sha256 "c40f2e402aa625e66eeffb520c079bb2313f330e61404a592fa08977eada5782" => :x86_64_linux
   end
 
   resource "seasnam" do
-    url "http://www.astro.com/ftp/swisseph/ephe/seasnam.txt"
-    sha256 "788fed3698bab62e53a9d519aed511566936b5577b3309251dba12da131c214b"
+    url "https://www.astro.com/ftp/swisseph/ephe/seasnam.txt"
+    sha256 "6388016a052de32673ab82d797be143627772d227b27d4ebb2cc8079b82ee471"
   end
-
   resource "sefstars" do
-    url "http://www.astro.com/ftp/swisseph/ephe/sefstars.txt"
-    sha256 "007d98f1d829ffdbd380025eaa383b4c63fc2d2ff2715d7e2586de38ce319de1"
+    url "https://www.astro.com/ftp/swisseph/ephe/sefstars.txt"
+    sha256 "3d69f4ea6d8b8be1cda81dd6a3a410ec88bb938010af6c1123180987776f69a8"
   end
-
   resource "seas" do
-    url "http://www.astro.com/ftp/swisseph/ephe/seas_18.se1"
+    url "https://www.astro.com/ftp/swisseph/ephe/seas_18.se1"
     sha256 "0afe3f94769b6718082411c2c4fb06bf9d1aaa6c0bc1bad8f8b8725421ef8748"
   end
-
   resource "semo" do
-    url "http://www.astro.com/ftp/swisseph/ephe/semo_18.se1"
+    url "https://www.astro.com/ftp/swisseph/ephe/semo_18.se1"
     sha256 "ecfa54dbf5bc0b5a9bc3e04ed28629a821e98625eacae38f4070593bba0e2980"
   end
-
   resource "sepl" do
-    url "http://www.astro.com/ftp/swisseph/ephe/sepl_18.se1"
+    url "https://www.astro.com/ftp/swisseph/ephe/sepl_18.se1"
     sha256 "0b7e416e3c1be9e6a0dd1d711dae7f7685793a0e7df13f76363a493dc27b6ea1"
   end
 
   def install
-    # Hack away the epehemeris path, as the default won't do.
+    # Hack away the ephemeris path, as the default won't do.
     open("src/swephexp.h", "a") do |file|
-      file.write "#define SE_EPHE_PATH \".:#{share}\""
+      file.write "#define SE_EPHE_PATH \".:#{libexec}\""
     end
 
     # we have to clean because the archive already has a linux compiled library
@@ -47,11 +44,11 @@ class Swetest < Formula
     bin.install "src/swetest"
 
     # install ephemeris
-    share.install resource("seasnam")
-    share.install resource("sefstars")
-    share.install resource("seas")
-    share.install resource("semo")
-    share.install resource("sepl")
+    libexec.install resource("seasnam")
+    libexec.install resource("sefstars")
+    libexec.install resource("seas")
+    libexec.install resource("semo")
+    libexec.install resource("sepl")
   end
 
   test do

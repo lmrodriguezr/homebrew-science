@@ -1,23 +1,28 @@
 class Wcslib < Formula
+  desc "Library and utilities for the FITS World Coordinate System"
   homepage "http://www.atnf.csiro.au/people/mcalabre/WCS/"
-  url "ftp://ftp.atnf.csiro.au/pub/software/wcslib/wcslib-5.7.tar.bz2"
-  sha256 "a0822088ddd128618b5fbbbc1787f5a80568da4f4f53ce76545c9cf1f4140632"
+  url "ftp://ftp.atnf.csiro.au/pub/software/wcslib/wcslib-5.16.tar.bz2"
+  sha256 "ed031e0cf1cec0e9cabfc650423efa526fec341441865001c1e2c56bfffc99ef"
+  revision 1
 
   bottle do
     cellar :any
-    sha256 "b041274c39a79f7043f883ccc5e914e8bb66c35084a4cd17fa8b528faa205880" => :yosemite
-    sha256 "c8595299a62857f9ef20221d664e71093bc88ab8334c331075e67226f8717933" => :mavericks
-    sha256 "7d2ed55eef5dbc5504b5eba8a2a986ae3b32182ba9c4baff8d75ee797ec5f51f" => :mountain_lion
+    sha256 "54bbcd8e7f8208f42901a13a637fa2994f0fa9d33e4b3326aba4fc8f171504d4" => :sierra
+    sha256 "209c69286e567c4cc34b6b70a0cf9f3beeb1182bb5a63e4ede05f684a0341771" => :el_capitan
+    sha256 "04388c291155822d31637875b883a42d723a445aff90d6e25c9a267091cb312a" => :yosemite
   end
 
-  option "with-pgsbox", "Build PGSBOX, a general curvilinear axis drawing routine for PGPLOT"
+  option "with-pgplot", "Build PGSBOX, a general curvilinear axis drawing routine for PGPLOT"
   option "with-fortran", "Build Fortran wrappers. Needed for --with-pgsbox."
-  option "with-check", "Perform `make check`. Note, together --with-pgsbox it will display GUI"
+  option "with-test", "Perform `make check`. Note, together --with-pgsbox it will display GUI"
+
+  deprecated_option "with-pgsbox" => "with-pgplot"
+  deprecated_option "with-check" => "with-test"
 
   depends_on "cfitsio"
-  depends_on "homebrew/x11/pgplot" if build.with? "pgsbox"
-  depends_on :x11 if build.with? "pgsbox"
-  depends_on :fortran if build.with? "fortran" or build.with? "pgsbox"
+  depends_on "pgplot" => :optional
+  depends_on :x11 if build.with? "pgplot"
+  depends_on :fortran if build.with?("fortran") || build.with?("pgplot")
 
   def install
     args = ["--disable-debug",
@@ -26,7 +31,7 @@ class Wcslib < Formula
             "--with-cfitsiolib=#{Formula["cfitsio"].opt_lib}",
             "--with-cfitsioinc=#{Formula["cfitsio"].opt_include}"]
 
-    if build.with? "pgsbox"
+    if build.with? "pgplot"
       args << "--with-pgplotlib=#{Formula["pgplot"].opt_lib}"
       args << "--with-pgplotinc=#{Formula["pgplot"].opt_include}"
     else

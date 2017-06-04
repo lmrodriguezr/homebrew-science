@@ -1,51 +1,59 @@
 class Delly < Formula
+  desc "Structural variant discovery by paired-end and split-read analysis"
   homepage "https://github.com/tobiasrausch/delly"
-  url "https://github.com/tobiasrausch/delly/archive/v0.6.5.tar.gz"
-  sha256 "6977001ef3a3eb5049515a4586640f77d60c4f784f7636c7c5cc456912081283"
-
+  url "https://github.com/tobiasrausch/delly/archive/v0.7.7.tar.gz"
+  sha256 "72298ef36be82fa0bd83c77c9c38d5bac48c9219595f1a206c26d6eeeff07c36"
   head "https://github.com/tobiasrausch/delly.git"
+  # doi "10.1093/bioinformatics/bts378"
+  # tag "bioinformatics"
 
   bottle do
-    sha256 "2abe5ca47e8e9de6bd7a38912063841959e6f0ac9ff4bf35ddc1f74e626f009d" => :yosemite
-    sha256 "32bf93246a9b613221d5c4144dc7d42f1e85f2b920c30b02f639597a3688f6b8" => :mavericks
-    sha256 "f74527a577cf146ac7b72d1f23c8105112fc57c207820dcc4cb08589624c28cf" => :mountain_lion
+    sha256 "b8a2e66f26bb0d619c784b32f1ea237294997c69da890d402c5c3869bbec6b9f" => :sierra
+    sha256 "8a4fc329d5a1777b2a96508321b87215975a6db44fb357167e30c4b41c51b3de" => :el_capitan
+    sha256 "263b3fcc606fcec858ab9dee7d7ddbb7d8a5651f158d3997a0af8a243c061edd" => :yosemite
   end
 
   option "with-binary", "Install a statically linked binary for 64-bit Linux" if OS.linux?
 
   if build.without? "binary"
-    depends_on "bamtools"
+    depends_on "bcftools"
     depends_on "boost"
     depends_on "htslib"
   end
 
-  resource "linux-binary-0.6.5" do
-    url "https://github.com/tobiasrausch/delly/releases/download/v0.6.5/delly_v0.6.5_CentOS5.4_x86_64bit"
-    sha256 "56ccdbd5e21d3570c7e34c82593e9ef5d86509f23f57e3e364bcd3f5a7e6899c"
+  resource "linux-binary" do
+    url "https://github.com/tobiasrausch/delly/releases/download/v0.7.5/delly_v0.7.5_CentOS5.4_x86_64bit"
+    version "0.7.5"
+    sha256 "ffacd99c373b82ef346179868db94af7615877e5fdf6252f797c2a45e984ea99"
+  end
+
+  # The tests were removed after 0.6.5, but they still work
+  resource "tests" do
+    url "https://github.com/tobiasrausch/delly/archive/v0.6.5.tar.gz"
+    sha256 "6977001ef3a3eb5049515a4586640f77d60c4f784f7636c7c5cc456912081283"
   end
 
   def install
     if build.with? "binary"
-      resource("linux-binary-0.6.5").stage do
-        bin.install "delly_v0.6.5_CentOS5.4_x86_64bit" => "delly"
+      resource("linux-binary").stage do
+        bin.install "delly_v#{version}_CentOS5.4_x86_64bit" => "delly"
       end
     else
-      inreplace "Makefile", ".htslib .bamtools .boost", ""
-      ENV.append_to_cflags "-I#{Formula["bamtools"].opt_include}/bamtools"
+      inreplace "Makefile", ".htslib .bcftools .boost", ""
       ENV.append_to_cflags "-I#{Formula["htslib"].opt_include}/htslib"
 
-      system "make", "BAMTOOLS_ROOT=#{Formula["bamtools"].opt_prefix}",
-                     "SEQTK_ROOT=#{Formula["htslib"].opt_prefix}",
+      system "make", "SEQTK_ROOT=#{Formula["htslib"].opt_prefix}",
                      "BOOST_ROOT=#{Formula["boost"].opt_prefix}",
                      "src/delly"
       bin.install "src/delly"
     end
-    share.install "test", "variantFiltering"
+    resource("tests").stage { pkgshare.install "test" }
     doc.install "README.md"
   end
 
   test do
-    system "delly", "--outfile=#{testpath}/test.vcf", share/"test/DEL.bam"
-    File.exist? testpath/"test.vcf"
+    system bin/"delly", "call", "-t", "DEL", "-g", pkgshare/"test/DEL.fa",
+           "-o", "test.vcf", pkgshare/"test/DEL.bam"
+    assert File.exist?("test.vcf"), "Failed to create test.vcf!"
   end
 end

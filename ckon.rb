@@ -1,14 +1,16 @@
 class Ckon < Formula
-  homepage "http://tschaume.github.io/ckon/"
+  desc "C++ tool for data analyses in the CERN ROOT framework"
+  homepage "https://tschaume.github.io/ckon/"
   url "https://github.com/tschaume/ckon/archive/v0.7.1.tar.gz"
-  sha1 "15481a0232e7fe6584f91cd530d324e8d275f1c0"
+  sha256 "4cc8bde10430e21520aed4b7ac5f6d96a80b8a91014760997f9a7039103a7e0d"
+  revision 3
   head "https://github.com/tschaume/ckon.git"
 
   bottle do
     cellar :any
-    sha1 "5e314bc8906e51866e3c210561987983a51ae14d" => :yosemite
-    sha1 "d73d9cafbe6d405cbd295171ff45676db3ccb394" => :mavericks
-    sha1 "d49c913baa3a43485724ba87dae663a9d229840c" => :mountain_lion
+    sha256 "2640f29e71414376b319a1b4300c5c94d9f4810f76b041bdc29002deba643355" => :sierra
+    sha256 "0a88e3e16853f39b18a85569283f74efbb974ca7624b5f492f978633d02cddd5" => :el_capitan
+    sha256 "262f08654a505af1dc855e6af169df6a2b645058a77cfbaaa71deb8af53c2c12" => :yosemite
   end
 
   depends_on "boost"
@@ -61,7 +63,7 @@ class Ckon < Formula
     Processing file "StRoot/BesCocktail/CmdLine.h"
        class "CmdLine" found at: 255
     Processing file "StRoot/BesCocktail/Database.h"
-       class "DatabaseManager" found at: 1728
+       class "DatabaseManager" found at: 1864
     Processing file "StRoot/BesCocktail/Functions.h"
        class "Functions" found at: 310
     Processing file "StRoot/BesCocktail/Simulation.h"
@@ -71,7 +73,7 @@ class Ckon < Formula
     Processing file "StRoot/BesCocktail/Analysis.h"
     Processing file "StRoot/BesCocktail/CmdLine.h"
     Processing file "StRoot/BesCocktail/Database.h"
-       namespace "YAML" found at: 737
+       namespace "YAML" found at: 756
     Processing file "StRoot/BesCocktail/Functions.h"
     Processing file "StRoot/BesCocktail/Simulation.h"
     Processing file "StRoot/BesCocktail/Utils.h"
@@ -82,6 +84,7 @@ class Ckon < Formula
     cd testpath
     mkdir "StRoot"
     system "git", "clone", "https://github.com/tschaume/BesCocktail.git", "StRoot/BesCocktail"
+    cd("StRoot/BesCocktail") { system "git", "checkout", "-q", "28446981a89cb851c43536200cc21310628aa555" }
     result = File.open(testpath/"ckon.out").read
     require "open3"
     Open3.popen3("#{bin}/ckon", "-v", "dry") do |_, stdout, _|

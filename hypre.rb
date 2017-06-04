@@ -1,22 +1,19 @@
 class Hypre < Formula
-  desc "A library of high performance preconditioners that features parallel multigrid methods for both structured and unstructured grid problems"
+  desc "Library featuring parallel multigrid methods for grid problems"
   homepage "http://computation.llnl.gov/casc/hypre/software.html"
-  url "http://ftp.mcs.anl.gov/pub/petsc/externalpackages/hypre-2.10.0b.tar.gz"
-  mirror "ftp://ftp.mirrorservice.org/sites/distfiles.gentoo.org/distfiles/hypre-2.10.0b.tar.gz"
-  sha256 "b55dbdc692afe5a00490d1ea1c38dd908dae244f7bdd7faaf711680059824c11"
+  url "https://computation.llnl.gov/projects/hypre-scalable-linear-solvers-multigrid-methods/download/hypre-2.11.2.tar.gz"
+  sha256 "25b6c1226411593f71bb5cf3891431afaa8c3fd487bdfe4faeeb55c6fdfb269e"
+  head "https://github.com/LLNL/hypre.git"
 
   bottle do
-    cellar :any
-    sha256 "cc15595f5c90c2b3e9feaf7889acfd41a2206be9a967c55fa758ba5ff2ccae76" => :yosemite
-    sha256 "09c544444b5ffddc4f5c8bae99b82e4f58dcb5cc069008a9648f8e7e8f5c02d0" => :mavericks
-    sha256 "7005b1c2c899c3811c413d427e3ab7146dd7670cfcddefc04c80d484d18a5e94" => :mountain_lion
+    cellar :any_skip_relocation
+    sha256 "26d8af03b11fbaaafc1bc68d2b1e34dee7f1182c33de5e4089d7a0cc2df056ec" => :sierra
+    sha256 "aa99b6ad167b0d582469356fc185512e7d77424b6e3cacc7be8ab865a7a92dbe" => :el_capitan
+    sha256 "3d337bc48fb101f1b25bb865703f04c2aed5f3852b173ca4de46e44ef06c0e65" => :yosemite
+    sha256 "d9af72bf8c84cd094f118e8bdebf3afced56eb71aba6981e1022298a2225bbff" => :x86_64_linux
   end
 
-  depends_on :fortran => :recommended
-  depends_on :mpi => [:cc, :cxx, :f90, :f77, :optional]
-  depends_on "openblas" => :optional
-
-  option "without-check", "Skip build-time tests (not recommended)"
+  option "without-test", "Skip build-time tests (not recommended)"
   option "with-superlu", "Use internal SuperLU routines"
   option "with-fei", "Use internal FEI routines"
   option "with-mli", "Use internal MLI routines"
@@ -24,11 +21,12 @@ class Hypre < Formula
   option "with-debug", "Build with debug flags"
   option "with-bigint", "Build with 64-bit indices"
 
-  # bug fix for SEGV
-  patch do
-    url "https://bitbucket.org/petsc/pkg-hypre/commits/566a6568170a4abbfc2488d02de23f76da0473b5/raw/"
-    sha256 "8af48d5612771ef49edd3d9a462df71b864f34abb1ec03c8234591c96c683f7f"
-  end
+  deprecated_option "with-check" => "with-test"
+
+  depends_on "veclibfort" if build.without?("openblas") && OS.mac?
+  depends_on :fortran => :recommended
+  depends_on :mpi => [:cc, :cxx, :f90, :f77, :recommended]
+  depends_on "openblas" => (OS.mac? ? :optional : :recommended)
 
   def install
     cd "src" do
@@ -79,14 +77,13 @@ class Hypre < Formula
         ENV["CXX"] = ENV["MPICXX"]
         ENV["F77"] = ENV["MPIF77"]
         ENV["FC"] = ENV["MPIFC"]
+        # MPI library strings for linking depends on compilers
+        # enabled.  Only the C library strings are needed (without the
+        # lib), because hypre is a C library.
         config_args += ["--with-MPI",
                         "--with-MPI-include=#{HOMEBREW_PREFIX}/include",
                         "--with-MPI-lib-dirs=#{HOMEBREW_PREFIX}/lib",
-                        # MPI library strings for linking depends on compilers
-                        # enabled.  Only the C library strings are needed (without the
-                        # lib), because hypre is a C library.
-                        "--with-MPI-libs=mpi",
-                       ]
+                        "--with-MPI-libs=mpi"]
       else
         config_args << "--without-MPI"
       end
@@ -100,78 +97,16 @@ class Hypre < Formula
       system "make", "all"
       system "make", "install"
 
-      if build.with? "check"
+      if build.with? "test"
         system "make", "check"
         system "make", "test"
         system "./test/ij"
         system "./test/struct"
         system "./test/sstruct", "-in", "test/sstruct.in.default", "-solver", "40", "-rhsone"
 
-        cd "examples" do
-          # The examples makefile does not use any of the variables from the
-          # makefile in its parent directory. Examples that use the IJ
-          # interface hang due to lack of LAPACK linkage, so a LAPACK
-          # flag must be added; this method of doing so is the least
-          # intrusive, and a patch is unlikely to be accepted upstream.
-          # Overriding makefile variables at the command line is unworkable
-          # here because the LFLAGS variable must be overridden, and LFLAGS
-          # contains other makefile variable substitutions.
-          lapack_flag = build.with?("openblas") ? "openblas" : "lapack"
-          inreplace "Makefile", "-lstdc++", "-lstdc++ -l#{lapack_flag}"
-
-          # Hack to excise Fortran examples from "make all"; they are still
-          # in the "make fortran" target, thus making it easier to implement
-          # conditional compilation and execution. Also won't be accepted
-          # upstream.
-          inreplace "Makefile", "ex5 ex5f", "ex5"
-          inreplace "Makefile", "ex12 ex12f", "ex12"
-
-          # Hack to excise FEI example from "make all"; to test, use
-          # "make ex10" instead.
-          inreplace "Makefile", "ex9 ex10", "ex9"
-
-          # Now make all compiles all examples EXCEPT:
-          # - Fortran examples (use "make fortran")
-          # - 64-bit indexing examples (use "make 64bit")
-          # - Babel examples (use "make babel", not implemented)
-          # - FEI example (use "make ex10", requires Babel, not implemented)
-          if build.without? "bigint"
-
-            # For some reason, this Makefile doesn't include the settings of
-            # the main Makefile.
-            local_args = ["CC=#{ENV["MPICC"]}", "F77=#{ENV["MPIF77"]}", "CXX=#{ENV["MPICXX"]}", "F90=#{ENV["MPIFC"]}"]
-            system "make", "all", *local_args
-
-            # Example run commands taken from source file comments in headers
-            system "mpiexec", "-np", "2", "./ex1"
-            system "mpiexec", "-np", "2", "./ex2"
-            system "mpiexec", "-np", "16", "./ex3", "-n", "33", "-solver", "-v", "1", "1"
-            system "mpiexec", "-np", "16", "./ex4", "-n", "33", "-solver", "10", "-K", "3", "-B", "0", "-C", "1", "-U0", "2", "-F", "4"
-            system "mpiexec", "-np", "4", "./ex5"
-            system "mpiexec", "-np", "2", "./ex6"
-            system "mpiexec", "-np", "16", "./ex7", "-n", "33", "-solver", "10", "-K", "3", "-B", "0", "-C", "1", "-U0", "2", "-F", "4"
-            system "mpiexec", "-np", "2", "./ex8"
-            system "mpiexec", "-np", "16", "./ex9", "-n", "33", "-solver", "0", "-v", "1", "1"
-            system "mpiexec", "-np", "4", "./ex11"
-            system "mpiexec", "-np", "2", "./ex12", "-pfmg"
-            system "mpiexec", "-np", "2", "./ex12", "-boomeramg"
-            system "mpiexec", "-np", "6", "./ex13", "-n", "10"
-            system "mpiexec", "-np", "6", "./ex14", "-n", "10"
-            system "mpiexec", "-np", "8", "./ex15", "-n", "10"
-
-            if build.with? :fortran
-              system "make", "fortran"
-
-              system "mpiexec", "-np", "4", "./ex5f"
-              system "mpiexec", "-np", "2", "./ex12f"
-            end
-          else
-            system "make", "64bit"
-
-            system "mpiexec", "-np", "4", "./ex5big"
-            system "mpiexec", "-np", "8", "./ex15big", "-n", "10"
-          end
-        end if build.with? :mpi
+        if build.with? :mpi
+          build_mpi_examples
+        end
       end
     end
   end
@@ -181,5 +116,87 @@ class Hypre < Formula
 
       http://computation.llnl.gov/casc/hypre/download/hypre-2.10.0b_reg.html
     EOS
+  end
+
+  test do
+    (testpath/"test.cpp").write <<-EOS
+      #include "HYPRE_struct_ls.h"
+
+      int main(int argc, char* argv[])
+      {
+          HYPRE_StructGrid grid;
+      }
+    EOS
+
+    system ENV.cxx, "test.cpp", "-o", "test"
+    system "./test"
+  end
+
+  def build_mpi_examples
+    cd "examples" do
+      # The examples makefile does not use any of the variables from the
+      # makefile in its parent directory. Examples that use the IJ
+      # interface hang due to lack of LAPACK linkage, so a LAPACK
+      # flag must be added; this method of doing so is the least
+      # intrusive, and a patch is unlikely to be accepted upstream.
+      # Overriding makefile variables at the command line is unworkable
+      # here because the LFLAGS variable must be overridden, and LFLAGS
+      # contains other makefile variable substitutions.
+      lapack_flag = build.with?("openblas") ? "openblas" : "lapack"
+      inreplace "Makefile", "-lstdc++", "-lstdc++ -l#{lapack_flag}"
+
+      # Hack to excise Fortran examples from "make all"; they are still
+      # in the "make fortran" target, thus making it easier to implement
+      # conditional compilation and execution. Also won't be accepted
+      # upstream.
+      inreplace "Makefile", "ex5 ex5f", "ex5"
+      inreplace "Makefile", "ex12 ex12f", "ex12"
+
+      # Hack to excise FEI example from "make all"; to test, use
+      # "make ex10" instead.
+      inreplace "Makefile", "ex9 ex10", "ex9"
+
+      # Now make all compiles all examples EXCEPT:
+      # - Fortran examples (use "make fortran")
+      # - 64-bit indexing examples (use "make 64bit")
+      # - Babel examples (use "make babel", not implemented)
+      # - FEI example (use "make ex10", requires Babel, not implemented)
+      if build.without? "bigint"
+
+        # For some reason, this Makefile doesn't include the settings of
+        # the main Makefile.
+        local_args = ["CC=#{ENV["MPICC"]}", "F77=#{ENV["MPIF77"]}", "CXX=#{ENV["MPICXX"]}", "F90=#{ENV["MPIFC"]}"]
+        system "make", "all", *local_args
+
+        # Example run commands taken from source file comments in headers
+        system "mpiexec", "-np", "2", "./ex1"
+        system "mpiexec", "-np", "2", "./ex2"
+        system "mpiexec", "-np", "16", "./ex3", "-n", "33", "-solver", "-v", "1", "1"
+        system "mpiexec", "-np", "16", "./ex4", "-n", "33", "-solver", "10", "-K", "3", "-B", "0", "-C", "1", "-U0", "2", "-F", "4"
+        system "mpiexec", "-np", "4", "./ex5"
+        system "mpiexec", "-np", "2", "./ex6"
+        system "mpiexec", "-np", "16", "./ex7", "-n", "33", "-solver", "10", "-K", "3", "-B", "0", "-C", "1", "-U0", "2", "-F", "4"
+        system "mpiexec", "-np", "2", "./ex8"
+        system "mpiexec", "-np", "16", "./ex9", "-n", "33", "-solver", "0", "-v", "1", "1"
+        system "mpiexec", "-np", "4", "./ex11"
+        system "mpiexec", "-np", "2", "./ex12", "-pfmg"
+        system "mpiexec", "-np", "2", "./ex12", "-boomeramg"
+        system "mpiexec", "-np", "6", "./ex13", "-n", "10"
+        system "mpiexec", "-np", "6", "./ex14", "-n", "10"
+        system "mpiexec", "-np", "8", "./ex15", "-n", "10"
+
+        if build.with? :fortran
+          system "make", "fortran"
+
+          system "mpiexec", "-np", "4", "./ex5f"
+          system "mpiexec", "-np", "2", "./ex12f"
+        end
+      else
+        system "make", "64bit"
+
+        system "mpiexec", "-np", "4", "./ex5big"
+        system "mpiexec", "-np", "8", "./ex15big", "-n", "10"
+      end
+    end
   end
 end

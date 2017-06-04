@@ -1,32 +1,26 @@
 class Visp < Formula
-  homepage "https://www.irisa.fr/lagadic/visp/visp.html"
-  head "svn://scm.gforge.inria.fr/svn/visp/trunk/ViSP ViSP-code"
-
-  stable do
-    url "https://gforge.inria.fr/frs/download.php/latestfile/475/ViSP-2.10.0.tar.gz"
-    sha256 "1c8a37cadd0012526be9ceaa182eb21fb0d45aac622a1f0f2d255225e85797aa"
-  end
+  desc "Visual Servoing Platform library"
+  homepage "https://visp.inria.fr"
+  url "http://gforge.inria.fr/frs/download.php/latestfile/475/visp-3.0.1.tar.gz"
+  sha256 "8aefd21f30dd4f6d210c59c28704f9e3adf874e3337571a3ae65a65946c94326"
 
   bottle do
-    cellar :any
-    sha256 "092bb8d4bb1b74ee69ca402ffe66d73677cf5e1b61fb9d6931299b2cd0827880" => :yosemite
-    sha256 "b961e8a9d5b95312159989fccfea007cd931095cc977d0c855cc8177dcfbfb7e" => :mavericks
-    sha256 "c3aa7137649ad12c5960fbde9b863d09b8dcc2e1fa28ec339f6a24b9134d0db6" => :mountain_lion
+    sha256 "255941dfb9c5c36ad20c96f2cf7c7f7614171de6499319ecae31a309a74ef2e8" => :sierra
+    sha256 "0262f88ac08ef7afe9d69b31f4d88c27226865163a171297e27f91928f4a6258" => :el_capitan
+    sha256 "9e172a63d23f0cffede0e023fd96b20bc4c960a7851015b3998503a5dd13b45e" => :yosemite
   end
-
-  depends_on "cmake"    => :build
-  depends_on "opencv"   => :recommended
-  depends_on "jpeg"     => :recommended
-  depends_on "libpng"   => :recommended
-  depends_on "zbar"     => :recommended
-  depends_on "ffmpeg"   => :optional
 
   option :cxx11
 
-  option "with-demos", "Build with demos"
-  option "with-examples", "Build with examples"
-  option "without-tests", "Build without tests"
-  option "with-tutorials", "Build with tutorials"
+  depends_on "cmake"     => :build
+  depends_on "gsl"       => :recommended
+  depends_on "jpeg"      => :recommended
+  depends_on "libdc1394" => :recommended
+  depends_on "libpng"    => :recommended
+  depends_on "libxml2"   => :recommended
+  depends_on "opencv3"   => :recommended
+  depends_on "zbar"      => :recommended
+  depends_on :x11        => :recommended
 
   def arg_switch(opt)
     (build.with? opt) ? "ON" : "OFF"
@@ -35,19 +29,24 @@ class Visp < Formula
   def install
     ENV.cxx11 if build.cxx11?
 
-    args = std_cmake_args + %W[
+    args = std_cmake_args + %w[
       -DCMAKE_OSX_DEPLOYMENT_TARGET=
-      -DUSE_X11=OFF
+      -DBUILD_DEMOS=OFF
+      -DBUILD_EXAMPLES=OFF
+      -DBUILD_TESTS=OFF
+      -DBUILD_TUTORIALS=OFF
     ]
 
-    args << "-DUSE_FFMPEG="       + arg_switch("ffmpeg")
-    args << "-DUSE_LIBJPEG="      + arg_switch("jpeg")
-    args << "-DUSE_LIBPNG="       + arg_switch("libpng")
-    args << "-DUSE_OPENCV="       + arg_switch("opencv")
-    args << "-DUSE_ZBAR="         + arg_switch("zbar")
+    args << "-DUSE_CPP11=ON" if build.cxx11?
 
-    args << "-DBUILD_DEMOS="      + arg_switch("demos")
-    args << "-DBUILD_EXAMPLES="   + arg_switch("examples")
+    args << "-DUSE_DC1394="       + arg_switch("libdc1394")
+    args << "-DUSE_GSL="          + arg_switch("gsl")
+    args << "-DUSE_JPEG="         + arg_switch("jpeg")
+    args << "-DUSE_OPENCV="       + arg_switch("opencv3")
+    args << "-DUSE_PNG="          + arg_switch("libpng")
+    args << "-DUSE_X11="          + arg_switch("x11")
+    args << "-DUSE_XML2="         + arg_switch("libxml2")
+    args << "-DUSE_ZBAR="         + arg_switch("zbar")
 
     mkdir "macbuild" do
       system "cmake", "..", *args
@@ -58,7 +57,7 @@ class Visp < Formula
 
   test do
     (testpath/"test.cpp").write <<-EOS.undent
-      #include <visp/vpConfig.h>
+      #include <visp3/core/vpConfig.h>
       #include <iostream>
       int main()
       {

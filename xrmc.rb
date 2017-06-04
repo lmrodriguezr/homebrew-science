@@ -1,48 +1,55 @@
 class Xrmc < Formula
-  homepage "https://github.com/golosio/xrmc"
   desc "Monte Carlo simulation of X-ray imaging and spectroscopy experiments"
-  url "http://lvserver.ugent.be/xrmc/files/xrmc-6.5.0.tar.gz"
-  mirror "https://xrmc.s3.amazonaws.com/xrmc-6.5.0.tar.gz"
-  sha256 "4995eaaf3b4583d443d0cf2003d73d1855b443938e431a4f758a607f540e026a"
-  revision 1
+  homepage "https://github.com/golosio/xrmc"
+  url "https://xrmc.tomschoonjans.eu/xrmc-6.6.0.tar.gz"
+  sha256 "89c2ca22c44ddb3bb15e1ce7a497146722e3f5a0c294618cae930a254cbbbb65"
 
   bottle do
-    sha256 "c65c774606b4f4828b9ecaa9da78fb294c943ff95496288b9f75640cb2b10f53" => :yosemite
-    sha256 "a90b22ee5bb19e9c2aff0e342fae61f66323608334b932b8be23023e20201d40" => :mavericks
-    sha256 "cc9fd9634165a26fcadfc8a7ec9632fea2122c5458db368f6bc111fe4e6ccaea" => :mountain_lion
+    sha256 "3c98fe0a3b3e5ee6214c8dd7f2f5198db6b3551bab582869767824842fd385d9" => :sierra
+    sha256 "b4c39cabc73c192a5d602147309a973ed4cd2d92fb6a22ec0f4fc4665d18f7e1" => :el_capitan
+    sha256 "ae287f540f1925817c8b2be79b0ac1fa27853a58fef3393640494471ae711f1a" => :yosemite
+    sha256 "afbf7d38ce4db9fb9f4322b27ffbdd99486e786d4d93553fc05d295e67f8e221" => :x86_64_linux
   end
 
-  depends_on "xraylib"
-  depends_on "pkg-config" => :build
+  option "without-test", "Don't run build-time tests (may take a long time)"
+
   needs :openmp
-  depends_on "xmi-msim" => :optional
-  option "with-check", "Run build-time tests (may take a long time)"
 
-  fails_with :llvm do
-    cause <<-EOS.undent
-    llvm-gcc's OpenMP does not support the collapse statement,
-    required to build xrmc
-    EOS
-  end
+  depends_on "autoconf" => :build
+  depends_on "automake" => :build
+  depends_on "libtool" => :build
+  depends_on "pkg-config" => :build
+  depends_on "xraylib"
+  depends_on "xmi-msim" => :optional
 
   def install
+    inreplace Dir.glob("{examples,test}/*/Makefile.am"),
+      "$(datadir)/examples/xrmc/", "$(datadir)/examples/"
+
     args = %W[
       --disable-dependency-tracking
       --disable-silent-rules
       --prefix=#{prefix}
       --enable-openmp
+      --docdir=#{doc}
+      --datarootdir=#{pkgshare}
     ]
 
-    args << ((build.with? "xmi-msim") ? "--enable-xmi-msim" : "--disable-xmi-msim")
+    if build.with? "xmi-msim"
+      args << "--enable-xmi-msim"
+    else
+      args << "--disable-xmi-msim"
+    end
 
+    system "autoreconf", "-fiv"
     system "./configure", *args
     system "make"
-    system "make", "check" if build.with? "check"
+    system "make", "check" if build.with? "test"
     system "make", "install"
   end
 
   test do
-    cp Dir.glob("#{share}/examples/xrmc/cylind_cell/*"), "."
-    system "#{bin}/xrmc", "input.dat"
+    cp_r (pkgshare/"examples/cylind_cell").children, testpath
+    system bin/"xrmc", "input.dat"
   end
 end

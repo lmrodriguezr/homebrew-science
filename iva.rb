@@ -1,18 +1,19 @@
 class Iva < Formula
   desc "Iterative Virus Assembler"
   homepage "https://github.com/sanger-pathogens/iva"
-  url "https://github.com/sanger-pathogens/iva/archive/v1.0.0.tar.gz"
-  sha256 "c2054b7e922accf03e038d5f128b1e2f96c6cabc92c8a67a3b01e0412c29b7d3"
+  url "https://github.com/sanger-pathogens/iva/archive/v1.0.8.tar.gz"
+  sha256 "20cac9b6683a2a33dc8cf790287f0eb8c3b4d02a287a380a071d821c1e0f1040"
   head "https://github.com/sanger-pathogens/iva.git"
-  bottle do
-    cellar :any
-    sha256 "b195e144b9eabea298815c3c5e220db78040e42e16e91caeedc824e0f6b4fa69" => :yosemite
-    sha256 "5bdfa78f91d580095f3f94a6986f93f3abbbbaa3667885de88932adbf2564acb" => :mavericks
-    sha256 "e919339bd100d9eb9ca456896f2fe81d2db46a5d88d71ac80bfcf7c49157db4e" => :mountain_lion
-  end
-
-  # tag "bioinformatics"
   # doi "10.1093/bioinformatics/btv120"
+  # tag "bioinformatics"
+
+  bottle do
+    rebuild 1
+    sha256 "9bcc18b7dbc779714def1347b7b76bcdffa2fd3db6fce0c08ead2fa03260711f" => :sierra
+    sha256 "1ec35ab8439d88dc0e6287493b691d564d073e785f85274f6b810a2a37e715ab" => :el_capitan
+    sha256 "891e1a44af5d9150f49d795b33a7bd09579cfa92425e8f6cc0b860b6d0b22870" => :yosemite
+    sha256 "85a3539747ae1b226d5e05ba5f1b6f4df77c5ae334bccc73a68eff6dd307677e" => :x86_64_linux
+  end
 
   depends_on :python3
   depends_on "kmc"
@@ -20,7 +21,11 @@ class Iva < Formula
   depends_on "smalt"
   depends_on "trimmomatic"
   depends_on "samtools"
-  depends_on "homebrew/python/numpy" => ["with-python3"]
+
+  resource "numpy" do
+    url "https://files.pythonhosted.org/packages/a5/16/8a678404411842fe02d780b5f0a676ff4d79cd58f0f22acddab1b392e230/numpy-1.12.1.zip"
+    sha256 "a65266a4ad6ec8936a1bc85ce51f8600634a31a258b722c9274a80ff189d9542"
+  end
 
   resource "pysam" do
     url "https://pypi.python.org/packages/source/p/pysam/pysam-0.8.3.tar.gz"
@@ -47,7 +52,7 @@ class Iva < Formula
     ENV.prepend_create_path "PYTHONPATH", libexec/"lib/python#{version}/site-packages"
     ENV.prepend_create_path "PYTHONPATH", libexec/"vendor/lib/python#{version}/site-packages"
 
-    %w[pysam pyfastaq decorator networkx].each do |r|
+    %w[numpy pysam pyfastaq decorator networkx].each do |r|
       resource(r).stage do
         system "python3", *Language::Python.setup_install_args(libexec/"vendor")
       end
@@ -59,6 +64,6 @@ class Iva < Formula
   end
 
   test do
-    assert_match "-f reads_fwd -r reads_rev", shell_output("iva -h 2>&1", 0)
+    assert_match "-f reads_fwd -r reads_rev", shell_output("#{bin}/iva -h 2>&1", 0)
   end
 end

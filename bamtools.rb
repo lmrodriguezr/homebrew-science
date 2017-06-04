@@ -1,28 +1,27 @@
 class Bamtools < Formula
-  desc "BamTools: API and command-line toolkit for BAM data"
+  desc "C++ API and command-line toolkit for BAM data"
   homepage "https://github.com/pezmaster31/bamtools"
   # doi "10.1093/bioinformatics/btr174"
   # tag "bioinformatics"
 
-  url "https://github.com/pezmaster31/bamtools/archive/v2.4.0.tar.gz"
-  sha256 "f1fe82b8871719e0fb9ed7be73885f5d0815dd5c7277ee33bd8f67ace961e13e"
-
+  url "https://github.com/pezmaster31/bamtools/archive/v2.4.1.tar.gz"
+  sha256 "933a0c1a83c88c1dac8078c0c0e82f6794c75cb927265399404bc2cc2611204b"
   head "https://github.com/pezmaster31/bamtools.git"
 
   bottle do
     cellar :any
-    sha256 "c4bf302ba07235cef55ddbb72125186132f312c14837d0852530922f8c68d336" => :yosemite
-    sha256 "f16f1cc37d517e51d9cfc2ff39fd1c0b3346b35bc2e8ec9c4fc180a3a95ed9e8" => :mavericks
-    sha256 "e3db9f89e38261baed32a4d46eddc96a5e3eb976591145aa2892a4b047bba58d" => :mountain_lion
+    sha256 "e5abdc25d558b613464e597cf22d7c091ff4b5a6e7e39e8b519eff5cdb8771f6" => :sierra
+    sha256 "dac25299b7679ed5e5286d20da0a03dd0d2f97fb7742bb45a838edc5982a607f" => :el_capitan
+    sha256 "b46516a39fc2a220499236541ea44b4e00382c43441c030d0304bbf24c3f3680" => :yosemite
+    sha256 "497b05bfa96a7dccce145faeb40998f711c1be240135d6cad72f30b547a6919b" => :x86_64_linux
   end
 
   depends_on "cmake" => :build
 
   patch do
-    # Install libbamtools in /usr/local/lib.
-    # https://github.com/pezmaster31/bamtools/pull/82
-    url "https://github.com/sjackman/bamtools/commit/3b6b89d.diff"
-    sha256 "de9438e932884a3f941a683984bed32b2eaca5c5483642c5a2253074f4a559ff"
+    # Install libbamtools in /usr/local/lib; reported 29 July 2013
+    url "https://github.com/pezmaster31/bamtools/pull/82.patch"
+    sha256 "960032af95dcd6554329e6707c048c2a59808ea22800b270a268a92f8e67006b"
   end
 
   def install

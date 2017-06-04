@@ -1,17 +1,18 @@
 class Kallisto < Formula
-  desc "kallisto: quantify abundances of transcripts from RNA-Seq data"
+  desc "Quantify abundances of transcripts from RNA-Seq data"
   homepage "https://pachterlab.github.io/kallisto/"
+  # doi "10.1038/nbt.3519"
   # tag "bioinformatics"
-
-  url "https://github.com/pachterlab/kallisto/archive/v0.42.2.tar.gz"
-  sha256 "6107fed6089c4c4e8a3f8d16c2539736321c134b518c95600ae93ddd3d699219"
+  url "https://github.com/pachterlab/kallisto/archive/v0.43.1.tar.gz"
+  sha256 "7baef1b3b67bcf81dc7c604db2ef30f5520b48d532bf28ec26331cb60ce69400"
+  revision 1
 
   bottle do
     cellar :any
-    revision 1
-    sha256 "c8b7c6a9684f79cff90ab95d0ab4a1f11517f983e08b2ff8eb01a8c446dce6df" => :yosemite
-    sha256 "df50619cee612d023a1ec8c37b6083d4c20b03a21be3c4257610bf15a4a7f3b0" => :mavericks
-    sha256 "2ddbf8882262dae72a63b99f9b21826cc1b4d21b0473ca70f885f5c505e69e28" => :mountain_lion
+    sha256 "af637131457128276885626f9288d2f426d6dba8ca04304dcc7a92992b87f70a" => :sierra
+    sha256 "f69aae21759935900949dbb45889080535334791b0c914f3413536d8004b7eff" => :el_capitan
+    sha256 "32a842d994bb5788733b2847daa4077d40860259adce3e984b07781f0e7fa400" => :yosemite
+    sha256 "c7a0324786508674e4b0c3f1b623482cf27cffa647ef461a71a0874d60786092" => :x86_64_linux
   end
 
   needs :cxx11

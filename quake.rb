@@ -1,37 +1,27 @@
 class Quake < Formula
   homepage "http://www.cbcb.umd.edu/software/quake/"
-  #doi "10.1186/gb-2010-11-11-r116"
-  #tag "bioinformatics"
+  # doi "10.1186/gb-2010-11-11-r116"
+  # tag "bioinformatics"
 
   url "http://www.cbcb.umd.edu/software/quake/downloads/quake-0.3.5.tar.gz"
-  sha1 "5ee22ae15415b97ef88e55f0dc786d07ed7aff7b"
+  sha256 "8ded707213117463675553bb989c4c69c5d01b122945b1e265c79d7e4e34eebd"
+  revision 2
 
-  bottle do
-    cellar :any
-    sha1 "5c8f0b65e4a4a53684d9eb79a9e3f49dd2192676" => :yosemite
-    sha1 "aaab051aaf0a8d2459ef6a5c8299594cf68977d0" => :mavericks
-  end
+  bottle :disable, "Test-bot cannot use the versioned gcc formulae"
 
   needs :openmp
 
   depends_on "boost"
   depends_on "jellyfish"
   depends_on "r"
+  depends_on "gcc@5" if OS.mac?
+
+  fails_with :gcc => "6"
 
   def install
     system "make", "-C", "src"
-    doc.install "LICENSE", "README"
-    bin.install %w[
-      bin/cov_model.py
-      bin/cov_model.r
-      bin/cov_model_qmer.r
-      bin/kmer_hist.r
-      bin/quake.py
-      src/build_bithash
-      src/correct
-      src/count-kmers
-      src/count-qmers
-    ]
+    bin.install Dir["{bin,src}/*"].select { |x| File.executable? x }
+    pkgshare.install %w[bin/cov_model.r bin/cov_model_qmer.r bin/kmer_hist.r]
   end
 
   test do

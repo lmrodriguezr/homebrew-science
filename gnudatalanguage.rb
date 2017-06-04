@@ -1,24 +1,24 @@
 class Gnudatalanguage < Formula
-  desc "A free and open-source IDL/PV-WAVE compiler"
-  homepage "http://gnudatalanguage.sourceforge.net"
-  url "https://downloads.sourceforge.net/project/gnudatalanguage/gdl/0.9.5/gdl-0.9.5.tar.gz"
-  sha256 "cc9635e836b5ea456cad93f8a07d589aed8649668fbd14c4aad22091991137e2"
-  revision 1
+  desc "Free and open-source IDL/PV-WAVE compiler"
+  homepage "https://gnudatalanguage.sourceforge.io/"
+  url "https://downloads.sourceforge.net/project/gnudatalanguage/gdl/0.9.7/gdl-0.9.7.tgz"
+  sha256 "2b5945d06e4d95f01cb70a3c432ac2fa4c81e1b3ac7c02687a6704ab042a7e21"
+  revision 2
 
   bottle do
-    sha256 "f0cd1ed7bb896d4997cb46ab95f9d24bf679ad445af46b2b2eadc0848512cda1" => :yosemite
-    sha256 "a70e346d02a83c18df4f02cffcdbaa81eb59ae5be460495c3ff14fdc0ce5fe45" => :mavericks
-    sha256 "a39bce8d89f0beb638584e4c0c60bd2e0a6d4ff3a8b8b1d4597e8d073374cc77" => :mountain_lion
+    sha256 "2d9af5504ce3a26fb0d113991331595fb35383b0898fa66b463f82ef67e1a509" => :sierra
+    sha256 "788434958e6a756ce3dc801dc053e39a1176ba108a0cd5b3e35bf805752b5595" => :el_capitan
+    sha256 "a73976464e23bdd080315e885a6ab6998cb5783963e3710a284bc55e54d81367" => :yosemite
+    sha256 "93974bea108e1865dd38c588f41d8884b97490e8febf39624817d220c8988f58" => :x86_64_linux
   end
 
   depends_on "cmake" => :build
   depends_on "pkg-config" => :build
-  depends_on "plplot" => "with-x11"
   depends_on "gsl"
   depends_on "readline"
   depends_on "graphicsmagick"
   depends_on "netcdf"
-  depends_on "homebrew/versions/hdf4" => :optional
+  depends_on "homebrew/science/hdf4" => :optional
   depends_on "hdf5"
   depends_on "libpng"
   depends_on "udunits"
@@ -28,32 +28,89 @@ class Gnudatalanguage < Formula
   depends_on :x11
   depends_on :python => :optional
 
-  # part 1 taken from macports https://trac.macports.org/browser/trunk/dports/math/gnudatalanguage/files/patch-CMakeLists.txt.diff
-  # other parts taken from https://github.com/freebsd/freebsd-ports/tree/master/science/gnudatalanguage/files
-  patch :p0 do
-    url "https://gist.githubusercontent.com/iml/ee107290ee5cd2850190/raw/83c046bce9facda8c560a8d38ea02913892c4b88/gnudatalanguage.diff"
-    sha256 "b2e9b2c1ed51676e048441b7bfc160488fdf5898b1d1c9396bc58eb85996981e"
+  # Supplementary dependencies for plplot
+  depends_on "cairo"
+  depends_on "pango"
+  depends_on "freetype"
+  depends_on "libtool" => :run
+
+  # Support HDF5 1.10. See https://bugs.debian.org/841971
+  patch do
+    url "https://gist.githubusercontent.com/sjackman/00fb95e10b7775d16924efb6faf462f6/raw/71ed3e05138a20b824c9e68707e403afc0f92c98/gnudatalanguage-hdf5-1.10.patch"
+    sha256 "8400c3c17ac87704540a302673563c1e417801e729e3460f1565b8cd1ef9fc9d"
   end
 
-  # restores compatibility with latest plplot. Patch found upstream at http://sourceforge.net/p/gnudatalanguage/bugs/643/
-  patch do
-    url "https://gist.github.com/tschoonj/e01c72165fd2cb9a68c9/raw/5143168a04de0d4f8fc6c3621733ce68fe7c6268/gdl-plplot.patch"
-    sha256 "937e82f6052aa72576df49046aa57d03593c7ba21d074f2455cd614318b881dd"
+  patch :DATA if build.with? "hdf4"
+
+  resource "plplot-x11" do
+    url "https://downloads.sourceforge.net/project/plplot/plplot/5.12.0%20Source/plplot-5.12.0.tar.gz"
+    sha256 "8dc5da5ef80e4e19993d4c3ef2a84a24cc0e44a5dade83201fca7160a6d352ce"
   end
 
   def install
-    args = std_cmake_args
-    args << "-DHDF=OFF" if build.without?("hdf4")
-    args << "-DPYTHON=OFF" if build.without?("python")
-    args << "-DWXWIDGETS=OFF" << "-DPSLIB=OFF"
-    system "cmake", ".", *args
-    system "make"
-    # several tests fail
-    # system "make", "check"
-    system "make", "install"
+    resource("plplot-x11").stage do
+      args = std_cmake_args
+      args << "-DPLD_xwin=ON"
+      args += %w[
+        -DENABLE_ada=OFF
+        -DENABLE_d=OFF
+        -DENABLE_qt=OFF
+        -DENABLE_lua=OFF
+        -DENABLE_tk=OFF
+        -DENABLE_python=OFF
+        -DENABLE_tcl=OFF
+        -DPLD_xcairo=OFF
+        -DPLD_wxwidgets=OFF
+        -DENABLE_wxwidgets=OFF
+        -DENABLE_java=OFF
+        -DENABLE_f95=OFF
+      ]
+
+      mkdir "plplot-build" do
+        system "cmake", "..", *args
+        system "make"
+        system "make", "install"
+      end
+    end
+
+    mkdir "build" do
+      args = std_cmake_args
+      args << "-DHDF=OFF" if build.without?("hdf4")
+      args << "-DPYTHON=OFF" if build.without?("python")
+      args << "-DWXWIDGETS=OFF" << "-DPSLIB=OFF"
+      system "cmake", "..", *args
+      system "make"
+
+      # The following tests FAILED:
+      #    80 - test_execute.pro (Failed)
+      #    84 - test_fft_leak.pro (Failed)
+      #   108 - test_image_statistics.pro (Failed)
+      #   128 - test_obj_isa.pro (Failed)
+      # Reported 3 Feb 2017 https://sourceforge.net/p/gnudatalanguage/bugs/716/
+      # system "make", "check"
+
+      system "make", "install"
+    end
   end
 
   test do
     system "#{bin}/gdl", "--version"
   end
 end
+
+__END__
+diff --git a/src/GDLTokenTypes.hpp b/src/GDLTokenTypes.hpp
+index 06b9316..a91f226 100644
+--- a/src/GDLTokenTypes.hpp
++++ b/src/GDLTokenTypes.hpp
+@@ -10,6 +10,10 @@
+ #ifdef __cplusplus
+ struct CUSTOM_API GDLTokenTypes {
+ #endif
++
++#ifdef NOP
++#undef NOP
++#endif
+	enum {
+		EOF_ = 1,
+		ALL = 4,

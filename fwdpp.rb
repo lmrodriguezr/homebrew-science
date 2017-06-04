@@ -1,39 +1,43 @@
 class Fwdpp < Formula
-  desc "fwdpp is a C++ template library for forward-time population genetic simulations"
+  desc "C++ template library for forward-time population genetic simulations"
   homepage "https://molpopgen.github.io/fwdpp/"
-  url "https://github.com/molpopgen/fwdpp/archive/0.3.5.tar.gz"
-  sha256 "a61693c21135adda83cfd9dd655130855f56ef51ea3b452125606c3d532b31aa"
+  url "https://github.com/molpopgen/fwdpp/archive/0.5.5.tar.gz"
+  sha256 "31d8bace6350d3c58dde460533b1a674c8792baace8741afd0a2efcf936295ba"
   head "https://github.com/molpopgen/fwdpp.git"
   # doi "10.1534/genetics.114.165019"
+  # tag "bioinformatics"
 
   bottle do
     cellar :any
-    sha256 "6b03d1d5ba93ba52ad5223610330e1fa43edaaf08babbfb591f6d23179022896" => :yosemite
-    sha256 "e5f12354b576b612135fb1a27075ef7d402f84988597db49ee633414f5342c41" => :mavericks
+    sha256 "684650c0b572e16944f3666098e69e24e166121c1980f8f2bd30aa4164f245eb" => :sierra
+    sha256 "35cd3374ad42a1a8c478633b93b587f77cadbfe0209be1d5591761d4b91fe60c" => :el_capitan
+    sha256 "80a324580a44dd0c668ab838118c347f9ad992224d3e4aaabe08b7f699177b82" => :yosemite
+    sha256 "806a50d0f71e49ab487fc4a4688a1e94a91a5ddd58f36e3b1d035eb8c6c7a33b" => :x86_64_linux
   end
 
-  option "without-check", "Disable build-time checking (not recommended)"
+  option "without-test", "Disable build-time checking (not recommended)"
 
-  depends_on "gsl"
-  depends_on "boost" => :recommended
-  depends_on "libsequence"
+  deprecated_option "without-check" => "without-test"
 
   # build fails on mountain lion at configure stage when looking for libsequence
   # so restrict to mavericks and newer
   depends_on :macos => :mavericks
 
+  depends_on "gsl"
+  depends_on "libsequence"
+  depends_on "boost" => :recommended
+
   def install
     system "./configure", "--prefix=#{prefix}"
     system "make"
-    system "make", "check" if build.with? "check"
+    system "make", "check" if build.with? "test"
     system "make", "install"
-    pkgshare.install "examples" # install examples
-    pkgshare.install "unit"     # install unit tests
+    pkgshare.install "examples", "testsuite/unit"
   end
 
   test do
     # run unit tests compiled with 'make check'
-    if build.with? "check"
+    if build.with? "test"
       Dir["#{pkgshare}/unit/*"].each { |f| system f if File.file?(f) && File.executable?(f) }
     end
   end

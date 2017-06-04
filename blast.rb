@@ -4,47 +4,50 @@ class Blast < Formula
   # doi "10.1016/S0022-2836(05)80360-2"
   # tag "bioinformatics"
 
-  url "ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/2.2.31/ncbi-blast-2.2.31+-src.tar.gz"
-  mirror "http://mirrors.vbi.vt.edu/mirrors/ftp.ncbi.nih.gov/blast/executables/blast+/2.2.31/ncbi-blast-2.2.31+-src.tar.gz"
-  version "2.2.31"
-  sha256 "f0960e8af2a6021fde6f2513381493641f687453a804239a7e598649b432f8a5"
+  url "ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/2.6.0/ncbi-blast-2.6.0+-src.tar.gz"
+  mirror "ftp://ftp.hgc.jp/pub/mirror/ncbi/blast/executables/blast+/2.6.0/ncbi-blast-2.6.0+-src.tar.gz"
+  version "2.6.0"
+  sha256 "0510e1d607d0fb4389eca50d434d5a0be787423b6850b3a4f315abc2ef19c996"
+  revision 1
 
   bottle do
-    sha256 "66c5d14b4dc4b2d14b2088b78345a6eea5813fba084e5bac8bc7fe0639784e98" => :yosemite
-    sha256 "f03007d42ed1286cdedd2f9dd4647f31e5f1c2463c575674b41172920c859bbe" => :mavericks
-    sha256 "722ff4c4196cd81a3402734f141eb0131a1e8f1336431523b32d7108f3de260a" => :mountain_lion
+    sha256 "de27d2b417b3a87eb297286b3c73baa0e0cdc169daa6d4e5cf87c3f005e1bdb3" => :sierra
+    sha256 "25b4750230f42ea305dd24040d2c0fb69a69f5cbf96ffd658a195f10df1e68c2" => :el_capitan
+    sha256 "395eccf79bf1d5becb44f30ef5487312b2cd824db5c31e7c5ee9d4595ad1d04d" => :yosemite
+    sha256 "00049c074bb65f23cf2d384d702ab2a060ed31436b7f2772c05b0314b59619ae" => :x86_64_linux
   end
 
   # Fix configure: error: Do not know how to build MT-safe with compiler g++-5 5.1.0
   fails_with :gcc => "5"
 
-  # Build failure reported to toolbox@ncbi.nlm.nih.gov on 11 May 2015,
-  # patch provided by developers; should be included in next release
-  patch :p0, :DATA
-
-  option "without-static", "Build without static libraries & binaries"
+  option "with-static", "Build without static libraries and binaries"
   option "with-dll", "Build dynamic libraries"
-  option "without-check", "Skip the self tests (Boost not needed)"
 
-  depends_on "boost" if build.with? "check"
   depends_on "freetype" => :optional
-  depends_on "gnutls"   => :optional
-  depends_on "hdf5"     => :optional
-  depends_on "jpeg"     => :recommended
-  depends_on "libpng"   => :recommended
-  depends_on "lzo"      => :optional
-  depends_on "pcre"     => :recommended
-  depends_on :mysql     => :optional
+  depends_on "gnutls" => :optional
+  depends_on "hdf5" => :optional
+  depends_on "jpeg" => :recommended
+  depends_on "libpng" => :recommended
+  depends_on "lzo" => :optional
+  depends_on :mysql => :optional
+  depends_on "pcre" => :recommended
   depends_on :python if MacOS.version <= :snow_leopard
 
-  def install
-    # Fix error:
-    # /bin/sh: line 2: /usr/bin/basename: No such file or directory
-    # See http://www.ncbi.nlm.nih.gov/viewvc/v1?view=revision&revision=65204
-    inreplace "c++/src/build-system/Makefile.in.top", "/usr/bin/basename", "basename"
+  patch do
+    # Fixed upstream in future version > 2.6
+    url "https://raw.githubusercontent.com/Homebrew/formula-patches/master/blast/blast-make-fix2.5.0.diff"
+    sha256 "ab6b827073df48a110e47b8de4bf137fd73f3bf1d14c242a706e89b9c4f453ae"
+  end
 
-    # Move libraries to libexec. Libraries and headers conflict with ncbi-c++-toolkit.
-    args = %W[--prefix=#{prefix} --libdir=#{libexec} --without-debug --with-mt]
+  def install
+    # The libraries and headers conflict with ncbi-c++-toolkit so use libexec.
+    args = %W[
+      --prefix=#{prefix}
+      --libdir=#{libexec}
+      --without-debug
+      --with-mt
+      --without-boost
+    ]
 
     args << (build.with?("mysql") ? "--with-mysql" : "--without-mysql")
     args << (build.with?("freetype") ? "--with-freetype=#{Formula["freetype"].opt_prefix}" : "--without-freetype")
@@ -62,53 +65,34 @@ class Blast < Formula
       args << "--with-dll" if build.with? "dll"
     end
 
-    # Boost is used only for unit tests.
-    args << (build.with?("check") ? "--with-check" : "--without-boost")
+    cd "c++"
 
-    cd "c++" do
-      system "./configure", *args
-      system "make"
-      system "make", "install"
+    # The build invokes datatool but its linked libraries aren't installed yet.
+    ln_s buildpath/"c++/ReleaseMT/lib", prefix/"libexec" if build.without? "static"
 
-      # Remove headers. Libraries and headers conflict with ncbi-c++-toolkit.
-      rm_r include
-    end
+    system "./configure", *args
+    system "make"
+
+    rm prefix/"libexec" if build.without? "static"
+
+    system "make", "install"
+
+    # The libraries and headers conflict with ncbi-c++-toolkit.
+    libexec.install include
   end
 
   def caveats; <<-EOS.undent
-    Using the option '--without-static' will create dynamic binaries instead of
-    static. The NCBI Blast static installation is approximately 7 times larger
+    Using the option "--with-static" will create static binaries instead of
+    dynamic. The NCBI Blast static installation is approximately 7 times larger
     than the dynamic.
 
-    Static binaries should be used for speed if the executable requires
-    fast startup time, such as if another program is frequently restarting
-    the blast executables.
+    Static binaries should be used for speed if the executable requires fast
+    startup time, such as if another program is frequently restarting the blast
+    executables.
     EOS
   end
 
   test do
-    system bin/"blastn", "-version"
+    assert_match version.to_s, shell_output("#{bin}/blastn -version")
   end
 end
-
-__END__
---- c++/include/corelib/ncbimtx.inl (revision 467211)
-+++ c++/include/corelib/ncbimtx.inl (working copy)
-@@ -388,7 +388,17 @@
-     _ASSERT(m_Lock);
-
-     m_ObjLock.Lock();
--    m_Listeners.remove(TRWLockHolder_ListenerWeakRef(listener));
-+    // m_Listeners.remove(TRWLockHolder_ListenerWeakRef(listener));
-+    // The above gives strange errors about invalid operands to operator==
-+    // with the Apple Developer Tools release containing Xcode 6.3.1 and
-+    // "Apple LLVM version 6.1.0 (clang-602.0.49) (based on LLVM 3.6.0svn)".
-+    // The below workaround should be equivalent.
-+    TRWLockHolder_ListenerWeakRef ref(listener);
-+    TListenersList::iterator it;
-+    while ((it = find(m_Listeners.begin(), m_Listeners.end(), ref))
-+           != m_Listeners.end()) {
-+        m_Listeners.erase(it);
-+    }
-     m_ObjLock.Unlock();
- }

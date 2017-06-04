@@ -1,28 +1,26 @@
-require "formula"
-
 class Rampart < Formula
+  desc "Configurable de novo assembly pipeline"
   homepage "https://github.com/TGAC/RAMPART"
-  #tag "bioinformatics"
+  # tag "bioinformatics"
+
+  url "https://github.com/TGAC/RAMPART/releases/download/Release-0.12.2/rampart-0.12.2.tar.gz"
+  sha256 "0dc1e71c40bc141aebfdf6c93960d119ecb19e64758b157320be29329acb0b9f"
+
+  bottle do
+    cellar :any_skip_relocation
+    sha256 "75891f2b1b8f591b13876b7f7efed3485d9acf1cf4d40dac60bcdf4fd4ab382c" => :sierra
+    sha256 "d4f35d3f07cf0f38d5cb812611b3366803eed0b24e83fbde7cb3201256c03913" => :el_capitan
+    sha256 "d4f35d3f07cf0f38d5cb812611b3366803eed0b24e83fbde7cb3201256c03913" => :yosemite
+  end
 
   head do
     url "https://github.com/TGAC/RAMPART.git", :branch => "develop"
     depends_on "maven" => :build
   end
 
-  url "https://github.com/TGAC/RAMPART/releases/download/Release-0.11.0/rampart-0.11.0.tar.gz"
-  sha1 "bfdd0271b37bfb1a308babb1f328bfcbc7cb3841"
-
-  bottle do
-    cellar :any
-    sha1 "fbb04392b0a279c71e06f3077506062f8c888c57" => :yosemite
-    sha1 "84c0684ba916b0ea9858d53da512e7fcf3b6d7ff" => :mavericks
-    sha1 "dee76143f82715dfdc2108df6cbda9f51e121bf0" => :mountain_lion
-  end
-
   depends_on :java => "1.7+"
 
   # Dataset improvement
-  depends_on "musket" => :optional
   depends_on "sickle" => :optional
   # quake (see below)
 
@@ -32,7 +30,6 @@ class Rampart < Formula
   # Assemblers
   depends_on "abyss" => :recommended
   depends_on "allpaths-lg" => :optional
-  depends_on "platanus" => :optional
   depends_on "soapdenovo" => :optional
   depends_on "velvet" => :recommended
   depends_on "spades" => :optional
@@ -46,21 +43,9 @@ class Rampart < Formula
   # Assembly analysis
   depends_on "cegma" => :optional
   depends_on "kat" => :recommended
-  # quast (see below)
 
-  # Quast and quake are now optional on mountain lion but recommended on
-  # all other platforms.  For Quast, this is because mountian lion does not
-  # seem to have matplotlib installed by default, which is a key dependency.
-  # For Quake, it has a dependency on jellyfish2, which doesn't seem to be
-  # configured correctly to use the right compiler (C++) at this point in
-  # time (4th Dec 2014).  We may remove this check in the future.
-  if OS.mac? && MacOS.version <= :mountain_lion
-    depends_on "quake" => :optional
-    depends_on "quast" => :optional
-  else
-    depends_on "quake" => :recommended
-    depends_on "quast" => :recommended
-  end
+  depends_on "quake" => :optional
+  depends_on "quast" => :optional
 
   def install
     if build.head?
@@ -72,6 +57,6 @@ class Rampart < Formula
   end
 
   test do
-    system "#{bin}/rampart --version"
+    system "#{bin}/rampart", "--version"
   end
 end

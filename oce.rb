@@ -1,15 +1,16 @@
 class Oce < Formula
+  desc "Open CASCADE Community Edition"
   homepage "https://github.com/tpaviot/oce"
-  url "https://github.com/tpaviot/oce/archive/OCE-0.17.tar.gz"
-  sha256 "9ab0dc2a2d125b46cef458b56c6d171dfe2218d825860d616c5ab17994b8f74d"
+  url "https://github.com/tpaviot/oce/archive/OCE-0.18.tar.gz"
+  sha256 "226e45e77c16a4a6e127c71fefcd171410703960ae75c7ecc7eb68895446a993"
+  revision 2
 
   bottle do
-    sha256 "75932d64aab68b7fad6c27a365cee5158924d311f9fbe789c063379b87759a2d" => :yosemite
-    sha256 "b98386e67112e79bfecb597f61fd00e86d8c2ed0b51fa07bdf5d3b105b34d9e0" => :mavericks
-    sha256 "c7e01db93d10a1bcccb7f52419caaec057eeb5cf246f25f7ca2514533b1d83eb" => :mountain_lion
+    sha256 "95b2fe2ee8e109a3a367d6c385a05b2fd1ab9cf6375a2f446427adc4588280d6" => :sierra
+    sha256 "371b8ce925904138c013dd6fbf9b750e290dee7968a1424908387a85df7022b8" => :el_capitan
+    sha256 "18a247ef0da6668452a160548db5aea464c4f147ae52b00000b496336490351e" => :yosemite
+    sha256 "80881db2fb51be4b5fba7387b497fc84888a8d8e76913a99a1a14109d06a4804" => :x86_64_linux
   end
-
-  conflicts_with "opencascade", :because => "OCE is a fork for patches/improvements/experiments over OpenCascade"
 
   option "without-opencl", "Build without OpenCL support"
 
@@ -20,6 +21,16 @@ class Oce < Formula
   depends_on "gl2ps" => :recommended
   depends_on "tbb" => :recommended
   depends_on :macos => :snow_leopard
+
+  unless OS.mac?
+    depends_on "tcl-tk"
+  end
+
+  conflicts_with "opencascade", :because => "OCE is a fork for patches/improvements/experiments over OpenCascade"
+
+  # fix build with Xcode 8 "previous definition of CLOCK_REALTIME"
+  # reported 27 Sep 2016 https://github.com/tpaviot/oce/issues/643
+  patch :DATA if !DevelopmentTools.clang_version.nil? && DevelopmentTools.clang_version >= "8.0"
 
   def install
     cmake_args = std_cmake_args
@@ -46,11 +57,27 @@ class Oce < Formula
 
   def caveats; <<-EOF.undent
     Some apps will require this enviroment variable:
-      CASROOT=#{opt_share}/oce-#{version}
+      CASROOT=#{opt_share}/oce-#{version.to_s.split(".")[0..1].join(".")}
     EOF
   end
 
   test do
-    "1\n"==`CASROOT=#{share}/oce-#{version} #{bin}/DRAWEXE -v -c \"pload ALL\"`
+    vers = version.to_s.split(".")[0..1].join(".")
+    cmd = "CASROOT=#{share}/oce-#{vers} #{bin}/DRAWEXE -v -c \"pload ALL\""
+    assert_equal "1", shell_output(cmd).chomp
   end
 end
+
+__END__
+diff --git a/src/OSD/OSD_Chronometer.cxx b/src/OSD/OSD_Chronometer.cxx
+index f7374fb..63ac140 100644
+--- a/src/OSD/OSD_Chronometer.cxx
++++ b/src/OSD/OSD_Chronometer.cxx
+@@ -51,7 +51,7 @@
+   #include <mach/mach.h>
+ #endif
+
+-#if defined(__APPLE__) && defined(__MACH__)
++#if defined(__APPLE__) && !defined(__MAC_10_12)
+ #include "gettime_osx.h"
+ #endif

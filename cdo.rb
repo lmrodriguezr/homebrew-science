@@ -1,14 +1,15 @@
 class Cdo < Formula
+  desc "Operators to manipulate and analyse climate and NWP model data"
   homepage "https://code.zmaw.de/projects/cdo"
-  url "https://code.zmaw.de/attachments/download/10198/cdo-1.6.9.tar.gz"
-  sha256 "9970a7d5c29a59011fea8df6977e66b7d2a5d2dc8b0723a28ac0237d6e69dea8"
+  url "https://code.zmaw.de/attachments/download/14686/cdo-1.8.2.tar.gz"
+  sha256 "6ca6c1263af2237737728ac937a275f8aa27680507636a6b6320f347c69a369a"
 
   bottle do
     cellar :any
-    revision 1
-    sha256 "1e9d7de02098e35922ff3bf411dfb7d7b662ecdb55c959f55e6d727734baa346" => :yosemite
-    sha256 "242c2284dd498cb906a68b426e570543d608af3757a8e81425edd6cfa4710a4b" => :mavericks
-    sha256 "e3924d07751e5106b0109123753cde5461e038c426817f73ba94822fca95f8da" => :mountain_lion
+    sha256 "4c48b582be0e9bf7d7607f029ca002ec490ab9e230de87c57fad275df950cbb9" => :sierra
+    sha256 "4d9181952c565989e5aae28ae07998766673bca4368cdb849fd32536e392c5ee" => :el_capitan
+    sha256 "f0e3d29696ed4b1ca0de197ddd8df9196836d87ac48c4d51a58434b7c51c08c6" => :yosemite
+    sha256 "bd29db7c3f7fccc7d73c913f6d42af251d80a3e91e4b18f5a6aae4307e56b6af" => :x86_64_linux
   end
 
   option "with-grib2", "Compile Fortran bindings"
@@ -28,7 +29,7 @@ class Cdo < Formula
 
   def install
     args = ["--disable-debug", "--disable-dependency-tracking",
-            "--prefix=#{prefix}",
+            "--prefix=#{prefix}", "LIBS=-lhdf5",
             "--with-netcdf=#{Formula["netcdf"].opt_prefix}",
             "--with-hdf5=#{Formula["hdf5"].opt_prefix}",
             "--with-szlib=#{Formula["szip"].opt_prefix}"]

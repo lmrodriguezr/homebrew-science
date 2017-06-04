@@ -4,15 +4,16 @@ class Samblaster < Formula
   # doi "10.1093/bioinformatics/btu314"
   # tag "bioinformatics"
 
-  url "https://github.com/GregoryFaust/samblaster/archive/v.0.1.22.tar.gz"
-  sha256 "829f6036cf081a2a64716bbb1940d4b5fef96979adfee8650c1ffe4ce6f46c8b"
+  url "https://github.com/GregoryFaust/samblaster/archive/v.0.1.24.tar.gz"
+  sha256 "72c42e0a346166ba00152417c82179bd5139636fea859babb06ca855af93d11f"
   head "https://github.com/GregoryFaust/samblaster"
 
   bottle do
-    cellar :any
-    sha256 "52e903cdfb8d83b45ed5196cf0677691ce2e82a1de3ae55fe0d0f6aeff7188f7" => :yosemite
-    sha256 "8fa4a1f0d5e951e52a3549ba510e4d2c1d259c74af398315a72f93eb927f1c09" => :mavericks
-    sha256 "ad7a536d87ec4f4d36307590037ff597898cef59d1ab81b4ef1aeac5e2c38a71" => :mountain_lion
+    cellar :any_skip_relocation
+    sha256 "74c3db0157feee98c2b8eba2b641e14aa9e6ced1f580e26f347176bfd28f2c64" => :sierra
+    sha256 "e9eb9875554987fc79f630f473bea38fe291c09e7dcd4ad19de80a220e0ebf45" => :el_capitan
+    sha256 "9d84519d0bdf7ad62d1b8177446067ea00fb991e30602ed2c865ea80b8310330" => :yosemite
+    sha256 "5b57cad3a0a95239eb69585163e9705b8e7a135af2c7c9724bac74d3038ef6a3" => :x86_64_linux
   end
 
   def install

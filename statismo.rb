@@ -1,13 +1,17 @@
 class Statismo < Formula
+  desc "Framework for building statistical image And shape models"
   homepage "https://github.com/statismo/statismo"
   url "https://github.com/statismo/statismo/archive/v0.11.0.tar.gz"
   sha256 "f9b7109996d9e42e48b07923ea6edacca57b8ac7c573de1c905dbba921385c4c"
+  revision 12
   head "https://github.com/statismo/statismo.git"
 
   bottle do
-    sha256 "97cd9accdb47d8187b9da59ff50df6ce9be04b0079429fd836f5eedc9264077f" => :yosemite
-    sha256 "bde700f313bf3deae9f65fffc2e29851e5cac4adbec51278255f78a1a1b810e9" => :mavericks
-    sha256 "1a628acd7e8df42a9fe9c109fa604ac51630d027a8e60cbd04144392334c4863" => :mountain_lion
+    cellar :any
+    sha256 "d4423108dae87f2b48042ff0ade06ee6f516a6338ae519f465a57d4e04cd14ca" => :sierra
+    sha256 "db01686061a8f625f179eba918ca149e4368223e40e28b86263748cec72426de" => :el_capitan
+    sha256 "9765569d539d532ee54c0b9acf4b602c62b03fadbc96896060227a613f970f2c" => :yosemite
+    sha256 "a3d0613b204d731ad06c9e5bdd6625a998c851ffb53a22689c1bb1c74403290c" => :x86_64_linux
   end
 
   depends_on "cmake" => :build
@@ -18,7 +22,7 @@ class Statismo < Formula
   depends_on "insighttoolkit"
 
   def install
-    args = std_cmake_args + %W[
+    args = std_cmake_args + %w[
       -DBUILD_SHARED_LIBS=ON
       -DBUILD_TESTING=OFF
       -DBUILD_EXAMPLES=ON

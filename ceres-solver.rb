@@ -1,36 +1,70 @@
-require 'formula'
-
 class CeresSolver < Formula
-  homepage 'http://ceres-solver.org/'
-  url 'http://ceres-solver.org/ceres-solver-1.10.0.tar.gz'
-  sha1 '340bf0676ed8b1da02a66ee4595923ba9fc75f1f'
-  head 'https://ceres-solver.googlesource.com/ceres-solver.git'
+  desc "C++ library for large-scale optimization"
+  homepage "http://ceres-solver.org/"
+  url "http://ceres-solver.org/ceres-solver-1.12.0.tar.gz"
+  sha256 "745bfed55111e086954126b748eb9efe20e30be5b825c6dec3c525cf20afc895"
+  revision 4
 
   bottle do
-    sha1 "f63f940e4d950fde0c231e0ea431bd2a0834d1d8" => :yosemite
-    sha1 "21afb7720c98d4961d66ca517f31ccbc9037fe2c" => :mavericks
-    sha1 "04b4f8954e4dcc4284138cdaf5837cf4575a4c20" => :mountain_lion
+    cellar :any
+    sha256 "1ed7f26588cdccbb6fbda17d8884e42643a996cba935249710c989f13d9d0377" => :sierra
+    sha256 "058778ae1a3f04041007f57d25f8460845ac7b5aba98ed96e8d40c3c72ba0f66" => :el_capitan
+    sha256 "ea87b346c34a931f82f661b8bedd7c6940f8ba0c96b45dbaf7bfc7792a950bdb" => :yosemite
   end
 
-  option 'without-tests', 'Do not build and run the tests (not recommended).'
+  head do
+    url "https://ceres-solver.googlesource.com/ceres-solver.git"
 
-  depends_on 'cmake' => :build
-  depends_on 'glog'
-  depends_on 'gflags'
-  depends_on 'eigen'
-  depends_on 'suite-sparse' => :recommended
+    depends_on "sphinx-doc" => :build
+  end
 
-  def suite_sparse_options
-    Tab.for_formula(Formula["suite-sparse"])
+  option "without-test", "Do not build and run the tests (not recommended)."
+  deprecated_option "without-tests" => "without-test"
+
+  depends_on "cmake" => :run
+  depends_on "glog"
+  depends_on "gflags"
+  depends_on "eigen"
+  depends_on "suite-sparse" => :recommended
+  if build.with? "suite-sparse"
+    depends_on "metis"
+  elsif OS.linux?
+    depends_on "openblas" => :recommended
   end
 
   def install
-    cmake_args = std_cmake_args + ['-DBUILD_SHARED_LIBS=ON']
-    cmake_args << "-DMETIS_LIBRARY=#{Formula["metis4"].opt_lib}/libmetis.dylib" if suite_sparse_options.with? "metis4"
-    cmake_args << "-DEIGEN_INCLUDE_DIR=#{Formula["eigen"].opt_include}/eigen3"
+    so = OS.mac? ? "dylib" : "so"
+    cmake_args = std_cmake_args + %W[
+      -DBUILD_SHARED_LIBS=ON
+      -DEIGEN_INCLUDE_DIR=#{Formula["eigen"].opt_include}/eigen3
+    ]
+    if build.with? "suite-sparse"
+      cmake_args << "-DMETIS_LIBRARY=#{Formula["metis"].opt_lib}/libmetis.#{so}"
+    else
+      cmake_args << "-DSUITESPARSE=OFF"
+    end
+    cmake_args << "-DBUILD_DOCUMENTATION=ON" if build.head?
     system "cmake", ".", *cmake_args
     system "make"
-    system "make test" if build.with? 'tests'
+    system "make", "test" if build.with? "test"
     system "make", "install"
+    pkgshare.install "examples", "data"
+    doc.install "docs/html"
+  end
+
+  test do
+    cp pkgshare/"examples/helloworld.cc", testpath
+    (testpath/"CMakeLists.txt").write <<-EOS.undent
+      cmake_minimum_required(VERSION 2.8)
+      project(helloworld)
+      find_package(Ceres REQUIRED)
+      include_directories(${CERES_INCLUDE_DIRS})
+      add_executable(helloworld helloworld.cc)
+      target_link_libraries(helloworld ${CERES_LIBRARIES})
+    EOS
+
+    system "cmake", "-DCeres_DIR=#{share}/Ceres", "."
+    system "make"
+    assert_match "CONVERGENCE", shell_output("./helloworld", 0)
   end
 end

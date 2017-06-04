@@ -1,34 +1,38 @@
 class Sratoolkit < Formula
-  desc "Tools for using data from INSDC Sequence Read Archive"
+  desc "Data tools for INSDC Sequence Read Archive"
   homepage "https://github.com/ncbi/sra-tools"
   # doi "10.1093/nar/gkq1019"
   # tag "bioinformatics"
 
-  url "https://github.com/ncbi/sra-tools/archive/2.5.2.tar.gz"
-  sha256 "d128c14e13ac2e8affd3497dc59490d4932551e9524d5db697eef0951ea786f1"
+  url "https://github.com/ncbi/sra-tools/archive/2.8.2-1.tar.gz"
+  version "2.8.2-1"
+  sha256 "0f28313c648c0dfad885376e403369f3110a1f21ce47b26a215aec5d65d455b1"
+  revision 1
+
   head "https://github.com/ncbi/sra-tools.git"
 
   bottle do
     cellar :any
-    sha256 "29ad5dd3cb04e9a1ba3b465d8412f3dd6043ec1f13b3046b7e747febb6f935b5" => :yosemite
-    sha256 "0573f01ba736dff7d6d57309969e33c2783123764df7372dd24eed3c27e37d7a" => :mavericks
-    sha256 "b3be2903f9d6258152c662addb0ec9df8cb628cd82dc0fe07157454abff64840" => :mountain_lion
-  end
-
-  resource "ngs-sdk" do
-    url "https://github.com/ncbi/ngs/archive/1.1.3.tar.gz"
-    sha256 "269c0286ed42fe00aec70d918298a0a5ca740c74189ef08fb97ee199611f13e1"
-  end
-
-  resource "ncbi-vdb" do
-    url "https://github.com/ncbi/ncbi-vdb/archive/2.5.2.tar.gz"
-    sha256 "f10f478338f9418beab0f1e16254a3f728d7b9c6f1e2c02c2ef9512c648c0903"
+    sha256 "b566f7a182e266f6d2086fb8b58b5d74f86a4330631be67a05dda99c3bd2e9e3" => :sierra
+    sha256 "177a2cfa74a3bfed01a16b2eb6ed15e967e972a4968bcc07bfb8fbcb636b417e" => :el_capitan
+    sha256 "5890289978739c34c789a469df28b80d71e2a68b5aa72f1394993f9bbba734b5" => :yosemite
+    sha256 "600a259c23495343fedcbff2b56de66f8867d070e342f32b5e3d04462f91a260" => :x86_64_linux
   end
 
   depends_on "autoconf" => :build
   depends_on "libxml2"
   depends_on "libmagic" => :recommended
   depends_on "hdf5" => :recommended
+
+  resource "ngs-sdk" do
+    url "https://github.com/ncbi/ngs/archive/1.3.0.tar.gz"
+    sha256 "803c650a6de5bb38231d9ced7587f3ab788b415cac04b0ef4152546b18713ef2"
+  end
+
+  resource "ncbi-vdb" do
+    url "https://github.com/ncbi/ncbi-vdb/archive/2.8.2.tar.gz"
+    sha256 "15c9a47a9ebaf01822c567817acd681c4a594b4ac92e8bcf08d4d580f62296a9"
+  end
 
   def install
     ENV.deparallelize
@@ -39,18 +43,21 @@ class Sratoolkit < Formula
 
     resource("ngs-sdk").stage do
       cd "ngs-sdk" do
-        system "./configure", "--prefix=#{prefix}", "--build=#{prefix}"
+        system "./configure", "--prefix=#{prefix}",
+                              "--build=#{Pathname.pwd}/ngs-sdk-build"
         system "make"
         system "make", "test"
         system "make", "install"
       end
     end
 
-    resource("ncbi-vdb").stage do
-      system "./configure", "--with-ngs-sdk-prefix=#{prefix}", "--prefix=#{prefix}", "--build=#{prefix}"
+    (buildpath/"ncbi-vdb").install resource("ncbi-vdb")
+    cd "ncbi-vdb" do
+      system "./configure", "--prefix=#{prefix}",
+                            "--with-ngs-sdk-prefix=#{prefix}",
+                            "--build=#{buildpath}/ncbi-vdb-build"
       system "make"
       system "make", "install"
-      (include/"ncbi-vdb").install Dir["*"]
     end
 
     inreplace "tools/copycat/Makefile", "-smagic-static", "-smagic"
@@ -58,24 +65,26 @@ class Sratoolkit < Formula
     # Fix the error: undefined reference to `SZ_encoder_enabled'
     inreplace "tools/pacbio-load/Makefile", "-shdf5 ", "-shdf5 -ssz "
 
-    system "./configure",
-      "--prefix=#{prefix}",
-      "--with-ngs-sdk-prefix=#{prefix}",
-      "--with-ncbi-vdb-sources=#{include}/ncbi-vdb",
-      "--with-ncbi-vdb-build=#{prefix}",
-      "--build=#{prefix}"
-    system "make"
-    system "make", "install"
+    system "./configure", "--prefix=#{prefix}",
+                          "--with-ngs-sdk-prefix=#{prefix}",
+                          "--with-ncbi-vdb-sources=#{buildpath}/ncbi-vdb",
+                          "--with-ncbi-vdb-build=#{buildpath}/ncbi-vdb-build",
+                          "--build=#{buildpath}/sra-tools-build"
+
+    system "make", "VDB_SRCDIR=#{buildpath}/ncbi-vdb"
+    system "make", "VDB_SRCDIR=#{buildpath}/ncbi-vdb", "install"
+
+    rm "#{bin}/magic"
     rm_rf "#{bin}/ncbi"
-    rm_rf "#{prefix}/sra-tools"
-    rm_rf "#{prefix}/ngs-sdk"
-    rm_rf "#{prefix}/ncbi-vdb"
     rm_rf "#{lib}64"
-    rm_rf "#{include}"
+    rm_rf include.to_s
+
+    pkgshare.install share/"examples"
   end
 
   test do
-    system bin/"fastq-dump", "SRR000001"
-    assert File.read("SRR000001.fastq").include?("@SRR000001.1 EM7LVYS02FOYNU length=284")
+    # just download the first FASTQ read from an NCBI SRA run (needs internet connection)
+    system bin/"fastq-dump", "-N", "1", "-X", "1", "SRR000001"
+    assert_match "@SRR000001.1 EM7LVYS02FOYNU length=284", File.read("SRR000001.fastq")
   end
 end

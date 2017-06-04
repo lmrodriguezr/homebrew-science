@@ -1,35 +1,52 @@
 class Analysis < Formula
+  desc "Programs for the (pre-NGS-era) analysis of population-genetic data."
   homepage "https://github.com/molpopgen/analysis"
-  url "https://github.com/molpopgen/analysis/archive/0.8.7.tar.gz"
-  sha256 "3af7ce89358376d3d27ee97b518735ddddc7a5cb6e0b340833c8e1a44fdb34be"
+  url "https://github.com/molpopgen/analysis/archive/0.8.8.tar.gz"
+  sha256 "f9ef9e0a90fce2c0f4fe462d6c05e22fef22df1c23b63a7c64ad7b538f6e8bb0"
+  revision 2
+  # tag "bioinformatics"
 
   bottle do
-    cellar :any
-    sha256 "40055b7f5992ceb0e82ebbb416c0ef9ed4ddadc128df8230edcf012242059c6b" => :yosemite
-    sha256 "67b41c0f0a5ff58e4a7e56c5656bbb6daff0819e27218e3a214245f74fff502c" => :mavericks
-    sha256 "5fc72ebd81ba0027610720a264ff3aba6613e10fe2de905b74b9c46c32649c55" => :mountain_lion
+    sha256 "2dcdbb025d1a1c68d6ec551bf1a6a6af663c0e94e19ff1faacea2f106bc7a790" => :sierra
+    sha256 "825c7efb29eb13e9d85a4841a7f16788e1aa7d6eec92c43c47f943216ec181c3" => :el_capitan
+    sha256 "a8fb8144516347f9722b79044108e41a668152fc6649b01dcb02efff2fc1a2e0" => :yosemite
+    sha256 "fa8c4a067de7239f06910d6af45daa7decffceb56475b300f5c8947f78d27190" => :x86_64_linux
   end
 
   depends_on "gsl"
-  depends_on "libsequence"
+  depends_on "boost"
+  depends_on "zlib" unless OS.mac?
 
-  # add missing include
-  # https://github.com/molpopgen/analysis/pull/3
-  patch do
-    url "https://github.com/tdsmith/molpopgen-analysis/commit/01c796d.diff"
-    sha256 "abaefd36f108f1981e28d874e4cd78ca961d07841e69b4af607d0585354c72d5"
+  # vendor an older version of libsequence as analysis no longer
+  # tracks libsequence updates and API changes
+  resource "libsequence" do
+    url "https://github.com/molpopgen/libsequence/archive/1.8.7.tar.gz"
+    sha256 "07fd87a8454b107afabc00a5b359f84f3766fd5a3629885bc87be17d25a937f1"
   end
 
   needs :cxx11
 
   def install
     ENV.cxx11
-    system "./configure", "--prefix=#{prefix}"
+
+    resource("libsequence").stage do
+      system "./configure", "--prefix=#{libexec}/libsequence",
+        "CPPFLAGS=-D_GLIBCXX_USE_CXX11_ABI=0"
+      system "make"
+      ENV.deparallelize { system "make", "check" }
+      system "make", "install"
+    end
+
+    ldflags = "LDFLAGS=-L#{libexec}/libsequence/lib"
+    ldflags += " -Wl,-rpath=#{libexec}/libsequence/lib" unless OS.mac?
+    system "./configure", "--prefix=#{prefix}", ldflags,
+      "CPPFLAGS=-D_GLIBCXX_USE_CXX11_ABI=0",
+      "CXXFLAGS=-I#{libexec}/libsequence/include"
     system "make"
     system "make", "install"
   end
 
   test do
-    assert shell_output("#{bin}/gestimator 2>&1", 1).include? "gestimator"
+    assert_match "codon", shell_output("#{bin}/gestimator 2>&1", 1)
   end
 end

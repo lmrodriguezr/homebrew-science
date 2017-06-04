@@ -5,29 +5,42 @@ class GetdpSvnStrategy < SubversionDownloadStrategy
 end
 
 class Getdp < Formula
-  desc "GetDP is an open source finite element solver using mixed elements."
+  desc "Open source finite element solver using mixed elements."
   homepage "http://www.geuz.org/getdp/"
-  url "http://www.geuz.org/getdp/src/getdp-2.6.0-source.tgz"
-  sha256 "ebbf6791e815dda7a306efbfe3cc0acd30cc2ad9ecf6ac0f2fb9fc75a9aae051"
-
-  bottle do
-    sha256 "dc9d380494af610648a2a75f64c5cec7cd84ca7f451ea3d63bca03aede7c3610" => :yosemite
-    sha256 "7551be949972b0b469830c1b874e0f57c6d624cedc67ebe01dac41946a202d5a" => :mavericks
-    sha256 "e42699e4804d2b74119ac7af6f8cd4a815432ae0e63e93369152f297f917cf71" => :mountain_lion
-  end
-
+  url "http://getdp.info/src/getdp-2.11.0-source.tgz"
+  sha256 "fc3b51e50357466849dbd07656107c8ac9d01c294b04c4801d2c227c1b1273eb"
+  revision 5
   head "https://geuz.org/svn/getdp/trunk", :using => GetdpSvnStrategy
 
-  option "without-check", "skip build-time tests (not recommended)"
+  bottle do
+    sha256 "b71eb674111927f6233b63f58bde529f0e468f6c921f75a7000f28be2dfcd5f7" => :sierra
+    sha256 "ebfffa6fb1c82b8c216d3f8c1ac4faf595ffab3dd436867de8388d1e69ab5e37" => :el_capitan
+    sha256 "46f3bd306e7785430e76dd184fb4d9e8d5a17c52026279b33cf1a3529d4b1e21" => :yosemite
+  end
 
+  option "without-test", "skip build-time tests (not recommended)"
+  deprecated_option "without-check" => "without-test"
+
+  depends_on "cmake" => :build
   depends_on :fortran
   depends_on :mpi => [:cc, :cxx, :f90, :recommended]
-  depends_on "arpack" => :recommended
-  depends_on "petsc" => :recommended
-  depends_on "slepc" => :recommended
+  if build.with? "mpi"
+    depends_on "arpack" => [:recommended, "with-mpi"]
+  else
+    depends_on "arpack" => :recommended
+  end
   depends_on "gmsh" => :recommended
   depends_on "gsl" => :recommended
-  depends_on "cmake" => :build
+  depends_on "hdf5" => :recommended
+  if build.with? "mpi"
+    depends_on "hdf5" => [:recommended, "with-mpi"]
+  else
+    depends_on "hdf5" => :recommended
+  end
+  depends_on "metis" => :recommended
+  depends_on "mumps" => :recommended
+  depends_on "petsc" => :recommended
+  depends_on "slepc" => :recommended
 
   def install
     args = std_cmake_args
@@ -54,7 +67,7 @@ class Getdp < Formula
     end
 
     # Fixed test to work without access to gmsh
-    inreplace "CMakeLists.txt", "../../gmsh/bin/gmsh", "./getdp"
+    inreplace "CMakeLists.txt", "add_test(${TEST} ${TEST_BIN} ${TEST} - )", "add_test(${TEST} #{bin}/getdp ${TEST})"
 
     mkdir "build" do
       system "cmake", "..", *args

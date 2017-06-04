@@ -1,26 +1,31 @@
 class Mlst < Formula
+  desc "Multi-Locus Sequence Typing of microbial contigs"
   homepage "https://github.com/tseemann/mlst"
-  url "https://github.com/tseemann/mlst/archive/1.2.tar.gz"
-  sha256 "037e159ed7678713b4d6a141b498435adb13dbd549c4d6d36a92a0738cae84f8"
-  bottle do
-    cellar :any
-    sha256 "4beb855b2de3850fc88323e673c4c3edc0479e66368763cf0fdde461dbea2f38" => :yosemite
-    sha256 "08de6200b91384a2913834774d49bc927a6f7247eb6ab3ef1671494e0b113d42" => :mavericks
-    sha256 "fb7ea7b027fbe6f06254b5b939dda33915ebfbaf86e2b12b561e29f53837bf80" => :mountain_lion
-  end
-
   # tag "bioinformatics"
 
-  depends_on "blat"
+  url "https://github.com/tseemann/mlst/archive/2.8.tar.gz"
+  sha256 "9cfa42fbc858113853f35e1612ff6374ba7cdb601eb21f72152624a1f5a7e7eb"
+
+  bottle do
+    cellar :any_skip_relocation
+    sha256 "17f7c1db160eb35474095cdab63b3b4ec5469824b35445119f6b8a125f11b89f" => :sierra
+    sha256 "17f7c1db160eb35474095cdab63b3b4ec5469824b35445119f6b8a125f11b89f" => :el_capitan
+    sha256 "17f7c1db160eb35474095cdab63b3b4ec5469824b35445119f6b8a125f11b89f" => :yosemite
+  end
+
+  depends_on "blast"
+  depends_on "Moo" => :perl
   depends_on "File::Temp" => :perl
   depends_on "File::Spec" => :perl
   depends_on "Data::Dumper" => :perl
+  depends_on "List::MoreUtils" => :perl
 
   def install
     prefix.install Dir["*"]
   end
 
   test do
-    assert_match "senterica", shell_output("mlst --list 2>&1", 0)
+    assert_match version.to_s, shell_output("#{bin}/mlst --version")
+    assert_match "senterica", shell_output("#{bin}/mlst --list 2>&1")
   end
 end

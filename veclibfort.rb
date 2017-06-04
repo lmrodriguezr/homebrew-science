@@ -1,37 +1,50 @@
-require 'formula'
+class MacOSRequirement < Requirement
+  fatal true
+  satisfy(build_env: false) { OS.mac? }
+  def message
+    "macOS is required."
+  end
+end
 
 class Veclibfort < Formula
-  homepage 'https://github.com/mcg1969/vecLibFort'
-  url 'https://github.com/mcg1969/vecLibFort/archive/0.4.2.tar.gz'
-  sha1 'fee75b043a05f1dc7ec6649cbab73e23a71a9471'
-  head 'https://github.com/mcg1969/vecLibFort.git'
-  revision 2
+  desc "GNU Fortran compatibility for Apple's vecLib"
+  homepage "https://github.com/mcg1969/vecLibFort"
+  url "https://github.com/mcg1969/vecLibFort/archive/0.4.2.tar.gz"
+  sha256 "c61316632bffa1c76e3c7f92b11c9def4b6f41973ecf9e124d68de6ae37fbc85"
+  head "https://github.com/mcg1969/vecLibFort.git"
+  revision 4
 
   bottle do
     cellar :any
-    sha256 "e981968fc514cbccfa297059be14bab5f75cf769a2da51a571c6c737e5a77a02" => :yosemite
-    sha256 "3260bc42e14b071a2b02b482baed8443b35835972b5edbbae9903864cb164fee" => :mavericks
-    sha256 "7fa568f525a34092d731ebdcc181636f9e733a2716dc42b51a94d01182b359ee" => :mountain_lion
+    sha256 "3e787cb188aa824e2541c58ece4e8c02c61b0e6025646765495392ea5019fa8d" => :sierra
+    sha256 "9cf0fa95441309c52caae5886182c244cc05449c08cfa102decfc1c63d266e42" => :el_capitan
+    sha256 "e4a6cb9d134ab7d182a8eaf7dec32df3d31ff42afe3e30a7c12bd4335c6c897f" => :yosemite
   end
 
-  option "without-check", "Skip build-time tests (not recommended)"
-
+  depends_on MacOSRequirement
   depends_on :fortran
 
   def install
     ENV.m64 if MacOS.prefer_64_bit?
     system "make", "all"
-    system "make", "check" if build.with? "check"
     system "make", "PREFIX=#{prefix}", "install"
+    pkgshare.install "tester.f90"
   end
 
-  def caveats
-    caveats = <<-EOS.undent
+  def caveats; <<-EOS.undent
       Installs the following files:
         * libvecLibFort.a: static library; link with -framework vecLib
         * libvecLibFort.dylib: dynamic library; *replaces* -framework vecLib
         * libvecLibFortI.dylib: preload (interpose) library.
       Please see the home page for usage details.
     EOS
+  end
+
+  test do
+    ENV.fortran
+    cd testpath do
+      system ENV["FC"], "-o", "tester", "-O", pkgshare/"tester.f90", "-L#{lib}", "-lvecLibFort"
+      system "./tester"
+    end
   end
 end

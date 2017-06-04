@@ -1,22 +1,27 @@
 class Viennarna < Formula
+  desc "Prediction and comparison of RNA secondary structures"
   homepage "http://www.tbi.univie.ac.at/~ronny/RNA/"
   # tag "bioinformatics"
   # doi "10.1186/1748-7188-6-26"
 
-  url "http://www.tbi.univie.ac.at/~ronny/RNA/packages/source/ViennaRNA-2.1.9.tar.gz"
-  sha256 "367f6a89ddbf7d326ab9ff7d87e3441774e434e1ef599d3511a4bf92a3b392eb"
+  url "http://www.tbi.univie.ac.at/RNA/packages/source/ViennaRNA-2.3.3.tar.gz"
+  sha256 "cf92c05e54dff32c2135433b6ebaa5330c05de02a1ae8b7c3b7a865d42eea514"
 
   bottle do
-    cellar :any
-    sha256 "d904e8069d9f78c88509effdcd557b7aabdd3ea98cd545bfe877cedf241b6d6e" => :yosemite
-    sha256 "25087b1886e24201b585f09fd7e5acb0291369d5f42ff2bd09bd5e3f39d6fff9" => :mavericks
-    sha256 "ca8239c8abe3e8e47ab143e4e49e0ceb435f8316eb8bd0999ee8249dc4cc9aef" => :mountain_lion
+    cellar :any_skip_relocation
+    sha256 "2828a32c707dc311947d32755a609a4f2bc7c6de0254d43b94c7538944e1ce69" => :sierra
+    sha256 "b95b4f52ce14c9c4437b8305d3c8b08e2def4c822c33381953c8e79b81cdf67c" => :el_capitan
+    sha256 "71e2108defc57d61435957b55ef0c4a3a533c39b86fdc7f17c81ba013567090f" => :yosemite
+    sha256 "2b44a6a50b8223645bb64920ae47ee3c60b26b9b46a1ac08e69cfc7c1d2b291b" => :x86_64_linux
   end
 
+  option "with-openmp", "Enable OpenMP multithreading"
   option "with-perl", "Build and install Perl interface"
 
   depends_on :x11
   depends_on "gd"
+
+  needs :openmp if build.with? "openmp"
 
   def install
     ENV["ARCHFLAGS"] = "-arch i386 -arch x86_64" if build.with? "perl"
@@ -27,7 +32,7 @@ class Viennarna < Formula
       "--disable-dependency-tracking",
       "--with-python",
     ]
-    args << "--disable-openmp" if ENV.compiler == :clang
+    args << "--disable-openmp" if build.without? "openmp"
     args << "--without-perl" if build.without? "perl"
 
     system "./configure", *args
@@ -38,6 +43,6 @@ class Viennarna < Formula
 
   test do
     output = `echo CGACGUAGAUGCUAGCUGACUCGAUGC |#{bin}/RNAfold --MEA`
-    assert output.include?("-1.30 MEA=21.31")
+    assert_match "-1.30 MEA=21.31", output
   end
 end

@@ -1,43 +1,24 @@
 class Pocl < Formula
-  homepage "http://pocl.sourceforge.net"
-  url "https://downloads.sourceforge.net/project/pocl/pocl-0.10.tar.gz"
-  sha1 "d1fb03637059b5098d61c4772a1dd7cc104a9276"
+  desc "MIT-licensed open source implementation of the OpenCL standard"
+  homepage "https://pocl.sourceforge.io/"
+  url "https://downloads.sourceforge.net/project/pocl/pocl-0.14.tar.gz"
+  sha256 "2127bf925a91fbbe3daf2f1bac0da5c8aceb16e2a9434977a3057eade974106a"
 
   bottle do
-    sha1 "c7191b243ea86068bfc5f63452bcbc00e090126a" => :yosemite
-    sha1 "62a3bd6f6db0d6ab6b70d2f238c071f596a427a0" => :mavericks
+    sha256 "e840d7622cc3a4e2991cee46438f4338d3d792b880df87fd997f495c977c4fde" => :sierra
+    sha256 "750fd4166e8cddc574d57e283eec0d7a2e8fa50831c42d6e24a5f989fbe2e9b8" => :el_capitan
+    sha256 "0c57dd7d46167d461626abf00d3635cdd39086bda540c84bffd85c99fad7d2de" => :yosemite
+    sha256 "6a531d396319978d4c69ba6315832b3c23ee27aedb2b4296836c7c239d319a8f" => :x86_64_linux
   end
 
-  option "without-check", "Skip build-time tests (not recommended)"
-
+  depends_on "cmake" => :build
   depends_on "pkg-config" => :build
+  depends_on "llvm"
   depends_on "hwloc"
-
-  if OS.linux? || MacOS.version > :mountain_lion
-    depends_on "llvm" => ["with-clang", "with-rtti"]
-  else
-    depends_on "homebrew/versions/llvm34"
-  end
-
   depends_on "libtool" => :run
-  depends_on "autoconf" => :build if build.with? "check"
-
-  # Check if ndebug flag is required for compiling pocl didn"t work on osx.
-  # https://github.com/pocl/pocl/pull/65
-  patch do
-    url "https://github.com/pocl/pocl/commit/fa86bf.diff"
-    sha1 "10f3a3cebce0003cab921c0a201b5e521882c2bc"
-  end
 
   def install
-    ENV.j1
-    system "./configure", "--disable-debug",
-                          "--enable-direct-linkage",
-                          "--disable-icd",
-                          "--enable-testsuites=",
-                          "--prefix=#{prefix}"
-    system "make", "prepare-examples" if build.with? "check"
-    system "make", "check" if build.with? "check"
+    system "cmake", ".", *std_cmake_args
     system "make", "install"
   end
 end

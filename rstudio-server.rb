@@ -1,17 +1,29 @@
 class RstudioServer < Formula
-  homepage "http://www.rstudio.com"
-  url "https://github.com/rstudio/rstudio/archive/v0.98.1103.tar.gz"
-  sha256 "084049aae03cbaaa74a848f491d57cffab5ea67372ece0e256d54e04bd5fc6da"
+  desc "Integrated development environment (IDE) for R"
+  homepage "https://www.rstudio.com"
+  url "https://github.com/rstudio/rstudio/archive/v1.0.143.tar.gz"
+  sha256 "8ae88731b4474e5e2ff9030aa14e168903fe3a7ffc4fa716f497084a86801062"
+  revision 1
+  head "https://github.com/rstudio/rstudio.git"
 
   bottle do
-    sha256 "f565aadae5569dfbf64d48c9985929ef92e3736e2f59625b180f74bc2c92c11c" => :yosemite
-    sha256 "de79c98f73085962bb880abad93036b8d0ddd35d2faad630806326337a40b862" => :mavericks
+    cellar :any
+    sha256 "4ae6091226f815b403a24c513ccf549dd63b1c2c36ebd2757baf1574b0483861" => :sierra
+    sha256 "48f1db436b323a393213c9f1889bb48de0106c42e5a79d3cc5ba1fbf713dd12e" => :el_capitan
+    sha256 "522f730c8e23e4ca7c85fea30ac1381e8a21ad87769a6523583109f832126fb5" => :yosemite
   end
 
   depends_on "ant" => :build
   depends_on "cmake" => :build
-  depends_on "homebrew/versions/boost150" => :build
-  depends_on "r"
+  depends_on "r" => :recommended
+  if OS.linux?
+    depends_on "linuxbrew/extra/linux-pam" => :recommended
+    depends_on "libuuid" => :recommended
+    depends_on "libffi" => :recommended
+    depends_on "jdk" => :recommended
+    depends_on "patchelf"
+  end
+  depends_on "boost"
   depends_on "openssl"
 
   resource "gin" do
@@ -20,8 +32,8 @@ class RstudioServer < Formula
   end
 
   resource "gwt" do
-    url "https://s3.amazonaws.com/rstudio-buildtools/gwt-2.6.0.zip"
-    sha256 "bd4c13a5d1078446d519a742ee233971e55c447d1b87ffd5b1f90e54dd876b9a"
+    url "https://s3.amazonaws.com/rstudio-buildtools/gwt-2.7.0.zip"
+    sha256 "aa65061b73836190410720bea422eb8e787680d7bc0c2b244ae6c9a0d24747b3"
   end
 
   resource "junit" do
@@ -44,9 +56,9 @@ class RstudioServer < Formula
     sha256 "5bf42fd9bcc45d45b54a0f59d5839feb454f39fd14170b8fab7f59bf59b1af64"
   end
 
-  resource "pandoc" do
-    url "https://s3.amazonaws.com/rstudio-buildtools/pandoc-1.13.1.zip"
-    sha256 "7aedb183913f46cc7e5fd35098e5ed275c5436da0a0f82d5d56c057fd27caf5f"
+  resource "chromedriver-linux" do
+    url "https://s3.amazonaws.com/rstudio-buildtools/chromedriver-linux"
+    sha256 "1ff3e9fc17e456571c440ab160f25ee451b2a4d36e61c8e297737cff7433f48c"
   end
 
   resource "dictionaries" do
@@ -55,60 +67,215 @@ class RstudioServer < Formula
   end
 
   resource "mathjax" do
-    url "https://s3.amazonaws.com/rstudio-buildtools/mathjax-23.zip"
-    sha256 "5242d35eb5f0d6fae295422b39a61070c17f9a7923e6bc996c74b9a825c1d699"
+    url "https://s3.amazonaws.com/rstudio-buildtools/mathjax-26.zip"
+    sha256 "939a2d7f37e26287970be942df70f3e8f272bac2eb868ce1de18bb95d3c26c71"
   end
 
-  resource "shinyapps" do
-    url "https://github.com/rstudio/shinyapps.git", :branch => "v0.98.1000"
+  resource "pandoc" do
+    url "https://s3.amazonaws.com/rstudio-buildtools/pandoc-1.17.2.zip"
+    sha256 "887991ffbe191278ddc010146c8ab3e98810932d08a6201245a8acb1ddc38390"
+  end
+
+  resource "libclang" do
+    url "https://s3.amazonaws.com/rstudio-buildtools/libclang-3.5.zip"
+    sha256 "ecb06fb65ddf0eb7c04be28edd11cc38717102afbe4dbfd6e237ea58d1da85ea"
+  end
+
+  resource "libclang-builtin-headers" do
+    url "https://s3.amazonaws.com/rstudio-buildtools/libclang-builtin-headers.zip"
+    sha256 "0b8f54c8d278dd5cd2fb3ec6f43e9ea1bfc9e8d595ff88127073d46550e88a74"
+  end
+
+  resource "rstudio-pam" do
+    url "https://raw.githubusercontent.com/rstudio/rstudio/4ad9b3fed9c5f3596503e8a97194bcb473c605db/src/cpp/server/extras/pam/mac/rstudio"
+    sha256 "eda59b6baf1279f15ca10ead75d35d54fd88e488e1fcffba2ee8ea115cf753ed"
+  end
+
+  if build.head?
+    resource "rsconnect" do
+      url "https://github.com/rstudio/rsconnect.git", :branch => "master"
+    end
+
+    resource "rmarkdown" do
+      url "https://github.com/rstudio/rmarkdown.git", :branch => "master"
+    end
+  end
+
+  unless build.head?
+    # this piece of code has been removed from RStudio master as R API has changed.
+    patch :DATA
+  end
+
+  def which_linux_distribution
+    if File.exist?("/etc/redhat-release") || File.exist?("/etc/centos-release")
+      distritbuion = "rpm"
+    else
+      distritbuion = "debian"
+    end
+    distritbuion
   end
 
   def install
-    # installation path of boost is hard coded, it has to be changed manually.
-    inreplace "src/cpp/CMakeLists.txt",
-      "/opt/rstudio-tools/boost/boost_1_50_0",
-      "#{Formula["boost150"].opt_prefix}"
+    unless build.head?
+      ENV["RSTUDIO_VERSION_MAJOR"] = version.to_s.split(".")[0]
+      ENV["RSTUDIO_VERSION_MINOR"] = version.to_s.split(".")[1]
+      ENV["RSTUDIO_VERSION_PATCH"] = version.to_s.split(".")[2]
+    end
 
     gwt_lib = buildpath/"src/gwt/lib/"
     (gwt_lib/"gin/1.5").install resource("gin")
-    (gwt_lib/"gwt/2.6.0").install resource("gwt")
+    (gwt_lib/"gwt/2.7.0").install resource("gwt")
     gwt_lib.install resource("junit")
     (gwt_lib/"selenium/2.37.0").install resource("selenium")
     (gwt_lib/"selenium/2.37.0").install resource("selenium-server")
-    (gwt_lib/"selenium/chromedriver/2.7").install resource("chromedriver-mac")
+    if OS.linux?
+      (gwt_lib/"selenium/chromedriver/2.7").install resource("chromedriver-linux")
+    elsif OS.mac?
+      (gwt_lib/"selenium/chromedriver/2.7").install resource("chromedriver-mac")
+    end
+
+    common_dir = buildpath/"dependencies/common"
+
+    (common_dir/"dictionaries").install resource("dictionaries")
+    (common_dir/"mathjax-26").install resource("mathjax")
+
+    if build.head?
+      (common_dir/"rsconnect").install resource("rsconnect")
+      (common_dir/"rmarkdown").install resource("rmarkdown")
+    end
 
     resource("pandoc").stage do
-      (buildpath/"dependencies/common/pandoc/1.13.1/").install "mac/pandoc"
-      (buildpath/"dependencies/common/pandoc/1.13.1/").install "mac/pandoc-citeproc"
+      if OS.linux?
+        arch = Hardware::CPU.is_64_bit? ? "x86_64" : "i686"
+
+        (common_dir/"pandoc/1.17.2/").install "linux/#{which_linux_distribution}/#{arch}/pandoc"
+        (common_dir/"pandoc/1.17.2/").install "linux/#{which_linux_distribution}/#{arch}/pandoc-citeproc"
+      elsif OS.mac?
+        (common_dir/"pandoc/1.17.2/").install "mac/pandoc"
+        (common_dir/"pandoc/1.17.2/").install "mac/pandoc-citeproc"
+      end
     end
 
-    (buildpath/"dependencies/common/dictionaries").install resource("dictionaries")
-    (buildpath/"dependencies/common/mathjax-23").install resource("mathjax")
-    (buildpath/"dependencies/common/shinyapps").install resource("shinyapps")
-    chdir("dependencies/common") { system "R", "CMD", "build", "shinyapps" }
+    resource("libclang").stage do
+      (common_dir/"libclang/3.5/").install OS.linux? ? "linux/x86_64/libclang.so" : "mac/x86_64/libclang.dylib"
+    end
+
+    (common_dir/"libclang/builtin-headers").install resource("libclang-builtin-headers")
 
     mkdir "build" do
-      system "cmake", "..",
-        "-DRSTUDIO_TARGET=Server",
-        "-DCMAKE_BUILD_TYPE=Release",
-        "-DBOOST_ROOT=#{Formula["boost150"].opt_prefix}",
-        "-DBoost_INCLUDE_DIR=#{Formula["boost150"].opt_prefix}/include",
-        "-DCMAKE_INSTALL_PREFIX=#{prefix}/rstudio"
+      args = ["-DRSTUDIO_TARGET=Server", "-DCMAKE_BUILD_TYPE=Release"]
+      args << "-DRSTUDIO_USE_LIBCXX=Yes"
+      args << "-DRSTUDIO_USE_SYSTEM_BOOST=Yes"
+      args << "-DBOOST_ROOT=#{Formula["boost"].opt_prefix}"
+      args << "-DBOOST_INCLUDEDIR=#{Formula["boost"].opt_include}"
+      args << "-DBOOST_LIBRARYDIR=#{Formula["boost"].opt_lib}"
+      args << "-DCMAKE_INSTALL_PREFIX=#{prefix}/rstudio-server"
+      args << "-DCMAKE_CXX_FLAGS=-I#{Formula["openssl"].opt_include}"
+
+      linkerflags = "-DCMAKE_EXE_LINKER_FLAGS=-L#{Formula["openssl"].opt_lib} -L#{Formula["boost"].opt_lib}"
+      if OS.linux?
+        linkerflags += " -L#{Formula["linux-pam"].opt_lib}" if build.with? "linux-pam"
+      end
+      args << linkerflags
+
+      args << "-DPAM_INCLUDE_DIR=#{Formula["linux-pam"].opt_include}" if build.with? "linux-pam"
+
+      system "cmake", "..", *args
       system "make", "install"
     end
+    if OS.mac? && !build.head?
+      # it should not be needed for future version of RStudio.
+      # https://github.com/rstudio/rstudio/commit/5284e2ac85f0071d21c0ff42d802804ea9e6c596
+      # move the pam file in place
+      resource("rstudio-pam").stage do
+        (prefix/"rstudio-server/extras/pam").install "rstudio"
+      end
+    end
+    bin.install_symlink prefix/"rstudio-server/bin/rserver"
+    bin.install_symlink prefix/"rstudio-server/bin/rstudio-server"
+    prefix.install_symlink prefix/"rstudio-server/extras"
+  end
 
-    (bin/"rstudio-server").write <<-EOS.undent
-      #!/usr/bin/env bash
+  def post_install
+    # patch path to rserver
+    Dir.glob(prefix/"extras/**/*") do |f|
+      if File.file?(f) && !File.readlines(f).grep(/#{prefix/"rstudio-server/bin/rserver"}/).empty?
+        inreplace f, /#{prefix/"rstudio-server/bin/rserver"}/, opt_bin/"rserver"
+      end
+    end
+    if OS.linux?
+      # brew patchelf rstudio-server
+      keg = Keg.new(prefix)
+      keg.relocate_dynamic_linkage Keg::Relocation.new(
+        :old_prefix => Keg::PREFIX_PLACEHOLDER,
+        :old_cellar => Keg::CELLAR_PLACEHOLDER,
+        :old_repository => Keg::REPOSITORY_PLACEHOLDER,
+        :new_prefix => HOMEBREW_PREFIX.to_s,
+        :new_cellar => HOMEBREW_CELLAR.to_s,
+        :new_repository => HOMEBREW_REPOSITORY.to_s,
+      )
+    end
+  end
 
-      export PATH=#{opt_prefix}/rstudio/bin:$PATH
-      export PATH=#{opt_prefix}/rstudio/bin/pandoc:$PATH
-      export PATH=#{opt_prefix}/rstudio/bin/postback:$PATH
+  def caveats
+    if OS.linux?
+      if which_linux_distribution == "rpm"
+        daemon = <<-EOS
+              sudo cp #{opt_prefix}/extras/systemd/rstudio-server.redhat.service /etc/systemd/system/
+        EOS
+      else
+        daemon = <<-EOS
+              sudo cp #{opt_prefix}/extras/systemd/rstudio-server.service /etc/systemd/system/
+        EOS
+      end
+    elsif OS.mac?
+      daemon = <<-EOS
+              If it is an upgrade or the plist file exists, unload the plist first
+              sudo launchctl unload -w /Library/LaunchDaemons/com.rstudio.launchd.rserver.plist
 
-      #{opt_prefix}/rstudio/bin/rserver "$@"
+              sudo cp #{opt_prefix}/extras/launchd/com.rstudio.launchd.rserver.plist /Library/LaunchDaemons/
+              sudo launchctl load -w /Library/LaunchDaemons/com.rstudio.launchd.rserver.plist
+      EOS
+    end
+    <<-EOS.undent
+      - To test run RStudio Server,
+          sudo #{opt_bin}/rserver --server-daemonize=0
+
+      - To complete the installation of RStudio Server
+          1. register RStudio daemon
+#{daemon}
+          2. install the PAM configuration
+              sudo cp #{opt_prefix}/extras/pam/rstudio /etc/pam.d/
+
+          3. sudo rstudio-server start
+
+      - In default, only users with id >1000 are allowed to login. To relax
+        requirement, add the following option to the configuration file located
+        in `/etc/rstudio/rserver.conf`
+
+          auth-minimum-user-id=500
     EOS
   end
 
   test do
-    system "rstudio-server", "--help"
+    system "#{bin}/rstudio-server", "version"
   end
 end
+
+__END__
+diff --git a/src/cpp/r/RRoutines.cpp b/src/cpp/r/RRoutines.cpp
+--- a/src/cpp/r/RRoutines.cpp
++++ b/src/cpp/r/RRoutines.cpp
+@@ -54,14 +54,6 @@ void registerAll()
+    R_CMethodDef* pCMethods = NULL;
+    if (s_cMethods.size() > 0)
+    {
+-      R_CMethodDef nullMethodDef ;
+-      nullMethodDef.name = NULL ;
+-      nullMethodDef.fun = NULL ;
+-      nullMethodDef.numArgs = 0 ;
+-      nullMethodDef.types = NULL;
+-      nullMethodDef.styles = NULL;
+-      s_cMethods.push_back(nullMethodDef);
+-      pCMethods = &s_cMethods[0];
+    }

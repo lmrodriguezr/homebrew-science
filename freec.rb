@@ -1,28 +1,29 @@
 class Freec < Formula
+  desc "Copy number and genotype annotation in whole genome/exome sequencing data"
   homepage "http://bioinfo.curie.fr/projects/freec/"
+  url "https://github.com/BoevaLab/FREEC/archive/v10.6.tar.gz"
+  sha256 "4e82f64bde5ff6ae4f02337c9fe30370282949b205dfc8d4aae5b789d1dd2838"
+  head "https://github.com/BoevaLab/FREEC.git"
   # tag "bioinformatics"
   # doi "10.1093/bioinformatics/btr670"
-  url "http://bioinfo.curie.fr/projects/freec/src/FREEC_Linux64.tar.gz"
-  sha256 "dd8c0768ea0ed5bd36169fa68f9a3f48dd6f15889b9a60c7977b27bdb6da995d"
-  version "7.2"
 
   bottle do
-    cellar :any
-    sha256 "af7558fda0442a9c242abeb6a9492d82926197f14b31b3e0059a067189e1ae93" => :yosemite
-    sha256 "f02914ae0075e54a4378d771f9dd5a98aa67da035606040b707758f9ead7163d" => :mavericks
-    sha256 "d7571b435829f2f7356cefdf542cd4563f5e0df038673ce201ab7237bc3ff73b" => :mountain_lion
+    cellar :any_skip_relocation
+    sha256 "36fbc93543b4f5e4703461b25ed14e099983d4dde3f1e329b0cb911bbbe350a3" => :sierra
+    sha256 "3283bcbec7ff79337ea130585a615462714a27aba9bc259167735b2dbd6c0613" => :el_capitan
+    sha256 "1a57935e21a4404f234da9b4c8fbd27ed4451f193947c78e0e59764a92066bf0" => :yosemite
+    sha256 "0a5417c13f8eab2422e5ba49924bd18fe09fb51952bd3b95fa95d867fe73167a" => :x86_64_linux
   end
 
   def install
-    # FAQ #20 Mac OS X building: http://bioinfo.curie.fr/projects/freec/FAQ.html
-    if OS.mac?
-      inreplace "myFunc.cpp", "values.h", "limits.h"
+    cd "src" do
+      system "make"
+      bin.install "freec"
     end
-    system "make"
-    bin.install "freec"
+    pkgshare.install "scripts", "data"
   end
 
   test do
-    assert_match "FREEC v#{version}", shell_output("freec 2>&1")
+    assert_match "FREEC v#{version}", shell_output("#{bin}/freec 2>&1")
   end
 end

@@ -1,19 +1,21 @@
 class Paraview < Formula
+  desc "Multi-platform data analysis and visualization application"
   homepage "http://paraview.org"
-  url "http://www.paraview.org/paraview-downloads/download.php?submit=Download&version=v4.2&type=source&os=all&downloadFile=ParaView-v4.2.0-source.tar.gz"
-  sha1 "a440ba9912549bdd23a949e22add41696715dd32"
+  url "http://www.paraview.org/paraview-downloads/download.php?submit=Download&version=v5.3&type=source&os=all&downloadFile=ParaView-v5.3.0.tar.gz"
+  sha256 "046631bbf00775edc927314a3db207509666c9c6aadc7079e5159440fd2f88a0"
+  revision 1
+
   head "git://paraview.org/ParaView.git"
 
   bottle do
-    sha1 "87c7c0288b7be02298e6b329d5257f622fc60409" => :yosemite
-    sha1 "eb0303a16ec842435c693339129c8b8b2c468324" => :mavericks
-    sha1 "77fa19bc95a425f2812b7fb14ba929c75b7a4bd2" => :mountain_lion
+    sha256 "0068f85750ff6276b849f1dc6a27be59c5dfd92395645d0707fbbe8d66d96a6f" => :sierra
+    sha256 "fa7464d763f332551bbd20fe3cddd7ed472c2ecab71162e97fb011782a4754a7" => :el_capitan
+    sha256 "c84ebd4494e40a6acc82320414975bdd98397d883e9b540cc2130292cf6af7a4" => :yosemite
   end
 
   depends_on "cmake" => :build
 
   depends_on "boost" => :recommended
-  depends_on "cgns" => :recommended
   depends_on "ffmpeg" => :recommended
   depends_on "qt" => :recommended
   depends_on :mpi => [:cc, :cxx, :optional]
@@ -26,16 +28,15 @@ class Paraview < Formula
   depends_on "fontconfig"
   depends_on "libpng"
 
-  # Temporary fix for a cast issue related to FreeType.
-  # See https://bugs.gentoo.org/show_bug.cgi?id=533444
-  patch :DATA
-
   def install
+    dylib = OS.mac? ? "dylib" : "so"
+
     args = std_cmake_args + %W[
       -DBUILD_SHARED_LIBS=ON
       -DBUILD_TESTING=OFF
-      -DMACOSX_APP_INSTALL_PREFIX:PATH=#{prefix}
+      -DMACOSX_APP_INSTALL_PREFIX=#{prefix}
       -DPARAVIEW_DO_UNIX_STYLE_INSTALLS:BOOL=OFF
+      -DPARAVIEW_QT_VERSION=5
       -DVTK_USE_SYSTEM_EXPAT:BOOL=ON
       -DVTK_USE_SYSTEM_FREETYPE:BOOL=ON
       -DVTK_USE_SYSTEM_HDF5:BOOL=ON
@@ -44,57 +45,47 @@ class Paraview < Formula
       -DVTK_USE_SYSTEM_PNG:BOOL=ON
       -DVTK_USE_SYSTEM_TIFF:BOOL=ON
       -DVTK_USE_SYSTEM_ZLIB:BOOL=ON
+      -DVTK_USE_SYSTEM_ZLIB:BOOL=NETCDF
     ]
 
     args << "-DPARAVIEW_BUILD_QT_GUI:BOOL=OFF" if build.without? "qt"
     args << "-DPARAVIEW_USE_MPI:BOOL=ON" if build.with? "mpi"
     args << "-DPARAVIEW_ENABLE_FFMPEG:BOOL=ON" if build.with? "ffmpeg"
     args << "-DPARAVIEW_USE_VISITBRIDGE:BOOL=ON" if build.with? "boost"
-    args << "-DVISIT_BUILD_READER_CGNS:BOOL=ON" if build.with? "cgns"
+    args << "-DPARAVIEW_ENABLE_PYTHON:BOOL=" + ((build.with? "python") ? "ON" : "OFF")
 
     mkdir "build" do
+      # Python3 support is being worked on, see https://gitlab.kitware.com/paraview/paraview/issues/16818
       if build.with? "python"
-        args << "-DPARAVIEW_ENABLE_PYTHON:BOOL=ON"
-        # CMake picks up the system"s python dylib, even if we have a brewed one.
-        args << "-DPYTHON_LIBRARY='#{%x(python-config --prefix).chomp}/lib/libpython2.7.dylib'"
-      else
-        args << "-DPARAVIEW_ENABLE_PYTHON:BOOL=OFF"
+        python_executable = `which python`.strip
+        python_prefix = `#{python_executable} -c 'import sys;print(sys.prefix)'`.chomp
+        python_include = `#{python_executable} -c 'from distutils import sysconfig;print(sysconfig.get_python_inc(True))'`.chomp
+        python_version = "python" + `#{python_executable} -c 'import sys;print(sys.version[:3])'`.chomp
+
+        args << "-DPYTHON_EXECUTABLE='#{python_executable}'"
+        args << "-DPYTHON_INCLUDE_DIR='#{python_include}'"
+
+        # CMake picks up the system's python dylib, even if we have a brewed one.
+        if File.exist? "#{python_prefix}/Python"
+          args << "-DPYTHON_LIBRARY='#{python_prefix}/Python'"
+        elsif File.exist? "#{python_prefix}/lib/lib#{python_version}.a"
+          args << "-DPYTHON_LIBRARY='#{python_prefix}/lib/lib#{python_version}.a'"
+        elsif File.exist? "#{python_prefix}/lib/lib#{python_version}.#{dylib}"
+          args << "-DPYTHON_LIBRARY='#{python_prefix}/lib/lib#{python_version}.#{dylib}'"
+        elsif File.exist? "#{python_prefix}/lib/x86_64-linux-gnu/lib#{python_version}.#{dylib}"
+          args << "-DPYTHON_LIBRARY='#{python_prefix}/lib/x86_64-linux-gnu/lib#{python_version}.so'"
+        else
+          odie "No libpythonX.Y.{dylib|so|a} file found!"
+        end
       end
       args << ".."
 
       system "cmake", *args
-      system "make"
       system "make", "install"
     end
   end
 
   test do
-    shell_output("#{prefix}/paraview.app/Contents/MacOS/paraview --version", 1)
+    assert_match "paraview version #{version}", shell_output("#{prefix}/paraview.app/Contents/MacOS/paraview --version 2>&1", 0)
   end
 end
-
-__END__
-diff --git a/VTK/Rendering/FreeType/vtkFreeTypeTools.cxx b/VTK/Rendering/FreeType/vtkFreeTypeTools.cxx
-index fcbb323..7a48f62 100644
---- a/VTK/Rendering/FreeType/vtkFreeTypeTools.cxx
-+++ b/VTK/Rendering/FreeType/vtkFreeTypeTools.cxx
-@@ -1183,7 +1183,7 @@ bool vtkFreeTypeTools::CalculateBoundingBox(const T& str,
-     if (bitmap)
-       {
-       metaData.ascent = std::max(bitmapGlyph->top - 1, metaData.ascent);
--      metaData.descent = std::min(-(bitmap->rows - (bitmapGlyph->top - 1)),
-+      metaData.descent = std::min(-(static_cast<int>(bitmap->rows) - (bitmapGlyph->top - 1)),
-                                   metaData.descent);
-       }
-     ++heightString;
-@@ -1950,8 +1950,8 @@ void vtkFreeTypeTools::GetLineMetrics(T begin, T end, MetaData &metaData,
-     if (bitmap)
-       {
-       bbox[0] = std::min(bbox[0], pen[0] + bitmapGlyph->left);
--      bbox[1] = std::max(bbox[1], pen[0] + bitmapGlyph->left + bitmap->width);
--      bbox[2] = std::min(bbox[2], pen[1] + bitmapGlyph->top - 1 - bitmap->rows);
-+      bbox[1] = std::max(bbox[1], pen[0] + bitmapGlyph->left + static_cast<int>(bitmap->width));
-+      bbox[2] = std::min(bbox[2], pen[1] + bitmapGlyph->top - 1 - static_cast<int>(bitmap->rows));
-       bbox[3] = std::max(bbox[3], pen[1] + bitmapGlyph->top - 1);
-       }
-     else

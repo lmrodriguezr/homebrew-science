@@ -3,42 +3,33 @@ class Bcftools < Formula
   homepage "http://www.htslib.org/"
   # tag "bioinformatics"
 
-  url "https://github.com/samtools/bcftools/archive/1.2.tar.gz"
-  sha256 "90ccd7dccfb0b2848b71f32fff073c420260e857b7feeb89c1fb4bfaba49bfba"
-  head "https://github.com/samtools/bcftools.git"
+  url "https://github.com/samtools/bcftools/releases/download/1.4.1/bcftools-1.4.1.tar.bz2"
+  sha256 "d7d0871846005c653f5e2e78e434f7f9b846ab245ab5c1cd4224ecbf52d99d08"
 
   bottle do
-    cellar :any
-    revision 1
-    sha256 "e5722e46e71e0af5719fee3949b76a56cb75d94318ffc1aa68ce0d758cddcd32" => :yosemite
-    sha256 "4b5c238d91a078c98637fec874644fbe352d14f01f83c3a8de4c6627301ced4a" => :mavericks
-    sha256 "4395d3e784632d25f34dfb431ebae11457206dddef3a580f87ed75c6500b594d" => :mountain_lion
+    sha256 "1ff54e0673300dd10e955f506c72d95d230977799156929b22c24889080b1401" => :sierra
+    sha256 "27d79f1244ec79a028c9a8432def58ad906fc8ff3661c72f51d5d8d8808db11a" => :el_capitan
+    sha256 "bba50d9490ae5f7b671ef24ee0bf11a41b858d0642aad31d644b4291fa4c94f6" => :yosemite
+    sha256 "0dbef49ca15ddddccad18081db004c831f9c7c249eeff49792f06c4b17a2b359" => :x86_64_linux
   end
 
-  option "with-polysomy", "Enable polysomy command. Makes licence GPL3 not MIT/Expat."
+  option "with-gsl", "Enable polysomy command. Makes licence GPL3 not MIT/Expat."
 
-  depends_on "gsl" if build.with? "polysomy"
-  depends_on "htslib"
+  deprecated_option "with-polysomy" => "with-gsl"
+
+  depends_on "xz"
   depends_on "samtools" => :recommended
+  depends_on "gsl" => :optional
+  depends_on "bzip2" unless OS.mac?
 
   def install
-    inreplace "Makefile", "include $(HTSDIR)/htslib.mk", ""
-    htslib = Formula["htslib"].opt_prefix
-    args = %W[make install prefix=#{prefix} HTSDIR=#{htslib}/include HTSLIB=#{htslib}/lib/libhts.a]
-
-    if build.with? "polysomy"
-      args << "USE_GPL=1"
-      gsl = Formula["gsl"].opt_prefix
-      inreplace "Makefile", "-DUSE_GPL", "-DUSE_GPL -I#{gsl}/include -L#{gsl}/lib"
-      inreplace "Makefile", "-lcblas", "-lgslcblas"
-    end
-
-    system *args
-
-    (share/"bcftools").install "test"
+    args = build.with?("gsl") ? "USE_GPL=1" : []
+    system "make", "all", "install", "prefix=#{prefix}", *args
+    pkgshare.install "test"
   end
 
   test do
-    assert_match "number of SNPs:\t3", shell_output("bcftools stats #{share}/bcftools/test/query.vcf")
+    output = shell_output("#{bin}/bcftools stats #{pkgshare}/test/query.vcf")
+    assert_match "number of SNPs:\t3", output
   end
 end

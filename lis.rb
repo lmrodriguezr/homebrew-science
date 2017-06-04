@@ -1,21 +1,23 @@
-require "formula"
-
 class Lis < Formula
+  desc "Library of Iterative Solvers for Linear Systems"
   homepage "http://www.ssisc.org/lis"
   url "http://www.ssisc.org/lis/dl/lis-1.4.34.tar.gz"
-  sha1 "60b08e4428c8f02e545b07817efef212dd2fb9df"
-  revision 1
+  sha256 "e25fb5ef0c52fa0c66efab626da7d1a4b4082776173ffce632a034ab73a4d292"
+  revision 4
 
   bottle do
     cellar :any
-    sha1 "0c3ee087d95296e10436630068382a1f584c74b8" => :yosemite
-    sha1 "bee267db184712cd22f6c581d55bfa73ca26c79d" => :mavericks
-    sha1 "60b431fbda6503a65506ee04f7adf091e0302338" => :mountain_lion
+    sha256 "bb451fc407949d90b2bc87bdf23285c9f8137d1a8711d163b7fda0079717c9f3" => :sierra
+    sha256 "f710200b217fb5d19a2070733df3395228c1da4c732cf1327b80b58357cd17df" => :el_capitan
+    sha256 "b188ef17d4204081f7579578a7197c5b138791de355a094e79612dab4bb92adc" => :yosemite
+    sha256 "8b2935abf0c48ae8687f7f64e035d840b2e20d8f5e1c9960c054b35ee4da5bc8" => :x86_64_linux
   end
 
-  option "without-check", "Skip build-time checks (not recommended)"
+  option "without-test", "Skip build-time tests (not recommended)"
   option "with-saamg",    "build SA-AMG preconditioner"
   option "with-quad",     "enable quadruple precision operations"
+
+  deprecated_option "without-check" => "without-test"
 
   depends_on :fortran => :recommended
   depends_on :mpi => [:cc, :cxx, :f77, :f90, :recommended]
@@ -23,16 +25,23 @@ class Lis < Formula
   def install
     ENV.deparallelize
 
-    args = %W[ --prefix=#{prefix} --disable-dependency-tracking --enable-shared]
+    args = %W[--prefix=#{prefix} --disable-dependency-tracking --enable-shared]
     args << "--enable-fortran" if build.with? :fortran
     args << "--enable-mpi"     if build.with? :mpi
     args << "--enable-omp" unless ENV.compiler == :clang
     args << "--enable-saamg"   if build.with? "saamg"
     args << "--enable-quad"    if build.with? "quad"
 
+    # Put examples in pkgshare
+    inreplace "test/Makefile.in", "share/examples/lis", "share/lis/examples"
+
     system "./configure", *args
     system "make"
     system "make", "check" if build.with? "check"
     system "make", "install"
+  end
+
+  test do
+    system "#{pkgshare}/examples/test.sh"
   end
 end

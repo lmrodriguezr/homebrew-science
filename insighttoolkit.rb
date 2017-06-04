@@ -1,56 +1,60 @@
 class Insighttoolkit < Formula
-  homepage "http://www.itk.org"
-  url "https://downloads.sourceforge.net/project/itk/itk/4.7/InsightToolkit-4.7.2.tar.gz"
-  sha1 "9f05222b79682a438799ebf90cf6e2db2fe94535"
+  desc "ITK is a toolkit for performing registration and segmentation"
+  homepage "https://www.itk.org"
+  url "https://downloads.sourceforge.net/project/itk/itk/4.11/InsightToolkit-4.11.1.tar.gz"
+  sha256 "ac7cf8f1cc98fb65b563dae66548b620a5a2d97f898ec03125cc0c92c714b8a5"
+  revision 1
   head "git://itk.org/ITK.git"
 
   bottle do
-    sha256 "94bee2ef435e83e915fe85d6d8f3add29389798cb39cedd446360f8f7b261e2b" => :yosemite
-    sha256 "1fb08bc3c7d49d1b38874a34785c9a435cfcc0d2b3236c4211fa72dedbdf054d" => :mavericks
-    sha256 "442ae301583c59429c1a5739653c5a377e5f9a612c814a83993beec6aea1d130" => :mountain_lion
+    sha256 "c479c0488da2768dfd0da45146b712e6a7292cacdebd12403a388714ea93a0a7" => :sierra
+    sha256 "689006eaee436d7c64ff0d835cc54bbf8faf61dc84ad41d8f42428fb7b31f6ac" => :el_capitan
+    sha256 "a1384649a3c696ef511d365742fc25f9de59c8a88806a3d7ddf7d50051a89ca3" => :yosemite
+    sha256 "2f56f5cb5d741f39f608e775043261dfb23db616be9d9d4c73107ea4e56d8af8" => :x86_64_linux
   end
 
   option :cxx11
-  cxx11dep = (build.cxx11?) ? ["c++11"] : []
+  option "with-examples", "Compile and install various examples"
+  option "with-itkv3-compatibility", "Include ITKv3 compatibility"
+  option "with-remove-legacy", "Disable legacy APIs"
+
+  deprecated_option "examples" => "with-examples"
+  deprecated_option "remove-legacy" => "with-remove-legacy"
+
+  cxx11dep = build.cxx11? ? ["c++11"] : []
 
   depends_on "cmake" => :build
-  depends_on "vtk" => [:build] + cxx11dep
   depends_on "opencv" => [:optional] + cxx11dep
   depends_on :python => :optional
+  depends_on :python3 => :optional
   depends_on "fftw" => :recommended
   depends_on "hdf5" => [:recommended] + cxx11dep
   depends_on "jpeg" => :recommended
   depends_on "libpng" => :recommended
   depends_on "libtiff" => :recommended
   depends_on "gdcm" => [:optional] + cxx11dep
+  depends_on "expat" unless OS.mac?
 
-  deprecated_option "examples" => "with-examples"
-  deprecated_option "remove-legacy" => "with-remove-legacy"
-
-  option "with-examples", "Compile and install various examples"
-  option "with-itkv3-compatibility", "Include ITKv3 compatibility"
-  option "with-remove-legacy", "Disable legacy APIs"
-  option "with-review", "Enable modules under review"
-
-  if build.with?("python") && build.stable?
-    onoe <<-EOS.undent
-      You need to build the HEAD version of ITK to be able to use Python Wrappings.
-      This feature will be available in the next stable release (ITK 4.8.0).
-      EOS
-    exit 1
+  if build.with? "python3"
+    depends_on "vtk" => [:build, "with-python3", "without-python"] + cxx11dep
+  elsif build.with? "python"
+    depends_on "vtk" => [:build, "with-python"] + cxx11dep
+  else
+    depends_on "vtk" => [:build] + cxx11dep
   end
 
   def install
+    dylib = OS.mac? ? "dylib" : "so"
+
     args = std_cmake_args + %W[
       -DBUILD_TESTING=OFF
       -DBUILD_SHARED_LIBS=ON
-      -DITK_USE_GPU=ON
       -DITK_USE_64BITS_IDS=ON
       -DITK_USE_STRICT_CONCEPT_CHECKING=ON
       -DITK_USE_SYSTEM_ZLIB=ON
+      -DITK_USE_SYSTEM_EXPAT=ON
       -DCMAKE_INSTALL_RPATH:STRING=#{lib}
       -DCMAKE_INSTALL_NAME_DIR:STRING=#{lib}
-      -DModule_ITKLevelSetsv4Visualization=ON
       -DModule_SCIFIO=ON
     ]
     args << ".."
@@ -65,23 +69,68 @@ class Insighttoolkit < Formula
     args << "-DITK_USE_SYSTEM_TIFF=ON" if build.with? "libtiff"
     args << "-DITK_USE_SYSTEM_GDCM=ON" if build.with? "gdcm"
     args << "-DITK_LEGACY_REMOVE=ON" if build.include? "remove-legacy"
-    args << "-DModule_ITKReview=ON" if build.with? "review"
+    args << "-DModule_ITKLevelSetsv4Visualization=ON"
+    args << "-DModule_ITKReview=ON"
+    args << "-DModule_ITKVtkGlue=ON"
+    args << "-DITK_USE_GPU=" + (OS.mac? ? "ON" : "OFF")
 
     args << "-DVCL_INCLUDE_CXX_0X=ON" if build.cxx11?
     ENV.cxx11 if build.cxx11?
 
     mkdir "itk-build" do
-      if build.with? "python"
-        args += %W[
-          -DITK_WRAP_PYTHON=ON
-          -DModule_ITKVtkGlue=ON
-        ]
+      if build.with?("python") || build.with?("python3")
+        python_executable = `which python`.strip if build.with? "python"
+        python_executable = `which python3`.strip if build.with? "python3"
+
+        python_prefix = `#{python_executable} -c 'import sys;print(sys.prefix)'`.chomp
+        python_include = `#{python_executable} -c 'from distutils import sysconfig;print(sysconfig.get_python_inc(True))'`.chomp
+        python_version = "python" + `#{python_executable} -c 'import sys;print(sys.version[:3])'`.chomp
+
+        args << "-DITK_WRAP_PYTHON=ON"
+        args << "-DPYTHON_EXECUTABLE='#{python_executable}'"
+        args << "-DPYTHON_INCLUDE_DIR='#{python_include}'"
         # CMake picks up the system's python dylib, even if we have a brewed one.
-        args << "-DPYTHON_LIBRARY='#{%x(python-config --prefix).chomp}/lib/libpython2.7.dylib'"
-        args << "-DPYTHON_INCLUDE_DIR='#{%x(python-config --prefix).chomp}/include/python2.7'"
+        if File.exist? "#{python_prefix}/Python"
+          args << "-DPYTHON_LIBRARY='#{python_prefix}/Python'"
+        elsif File.exist? "#{python_prefix}/lib/lib#{python_version}.a"
+          args << "-DPYTHON_LIBRARY='#{python_prefix}/lib/lib#{python_version}.a'"
+        elsif File.exist? "#{python_prefix}/lib/lib#{python_version}.#{dylib}"
+          args << "-DPYTHON_LIBRARY='#{python_prefix}/lib/lib#{python_version}.#{dylib}'"
+        elsif File.exist? "#{python_prefix}/lib/x86_64-linux-gnu/lib#{python_version}.#{dylib}"
+          args << "-DPYTHON_LIBRARY='#{python_prefix}/lib/x86_64-linux-gnu/lib#{python_version}.#{dylib}'"
+        else
+          odie "No libpythonX.Y.{dylib|so|a} file found!"
+        end
       end
       system "cmake", *args
       system "make", "install"
     end
+  end
+
+  test do
+    (testpath/"test.cxx").write <<-EOS
+      #include "itkImage.h"
+
+      int main(int argc, char* argv[])
+      {
+        typedef itk::Image< unsigned short, 3 > ImageType;
+        ImageType::Pointer image = ImageType::New();
+        image->Update();
+
+        return EXIT_SUCCESS;
+      }
+    EOS
+
+    dylib = OS.mac? ? "1.dylib" : "so.1"
+    v=version.to_s.split(".")[0..1].join(".")
+    # Build step
+    system ENV.cxx, "-isystem", "#{include}/ITK-#{v}", "-o", "test.cxx.o", "-c", "test.cxx"
+    # Linking step
+    system ENV.cxx, "test.cxx.o", "-o", "test",
+                    "#{lib}/libITKCommon-#{v}.#{dylib}",
+                    "#{lib}/libITKVNLInstantiation-#{v}.#{dylib}",
+                    "#{lib}/libitkvnl_algo-#{v}.#{dylib}",
+                    "#{lib}/libitkvnl-#{v}.#{dylib}"
+    system "./test"
   end
 end

@@ -1,35 +1,42 @@
 class Arb < Formula
+  desc "C library for arbitrary-precision floating-point ball arithmetic"
   homepage "http://fredrikj.net/arb/index.html"
-  url "https://github.com/fredrik-johansson/arb/archive/2.5.0.tar.gz"
-  sha256 "1c741b3d7c7a350c01572fb9cdd8218049c669409dff21c1a569a163942e4803"
+  url "https://github.com/fredrik-johansson/arb/archive/2.10.0.tar.gz"
+  sha256 "5315549eb2af112a12750f8967282b0150ffa62750d4e3c3ea0ac5ad75da8c4b"
   head "https://github.com/fredrik-johansson/arb.git"
 
   bottle do
     cellar :any
-    sha256 "f197f70e77fef5508015282639034df17e14f99e76c9d3e80376982529fce302" => :yosemite
-    sha256 "a25d7f83620b4e73410e578c40a436ec9113045ebcfecea337a8416b87cd81de" => :mavericks
-    sha256 "6e199a91de0f513d08c90370032f946057256cec12306b4db6ff05fabd42b31d" => :mountain_lion
+    sha256 "03298f232d02a5c6f19f8d542c412c07bead86a4c3a49e792266779f740b196a" => :sierra
+    sha256 "23b3f7c5c4ded5d4d97c3c690204d6f180c9f67d4dcf0ba706a9790d6f84a725" => :el_capitan
+    sha256 "e6b665daf94445b76a9e3fd146c845b821958b224a6e5d086b22ae9ef4a03761" => :yosemite
+    sha256 "4c0d1a72f3a51b0df884e151215445f7f1bcc10be6bb7720ee27eecee044b52b" => :x86_64_linux
   end
+
+  option "without-test", "Disable build-time checking (not recommended)"
 
   depends_on "gmp"
   depends_on "mpfr"
   depends_on "flint"
 
-  # Will be enabled once the new stable (with patched tests) is released
-  # some of the tests in 2.5.0 are broken because they call not yet implemented
-  # methods
-  # option "with-check", "Enable build-time checking (not recommended)"
-
   def install
-    system "./configure", "--prefix=#{prefix}"
-    # We need to remove this line to have 2.5.0 compiled on OSX
-    # it is fixed in the new version, this line will disappear then
-    inreplace "Makefile", "$(QUIET_AR) $(AR) rcs libarb.a $(OBJS);", ""
+    if OS.mac?
+      inreplace "Makefile.in" do |s|
+        s.gsub! "ln -sf \"$(ARB_LIB)\" \"$(ARB_LIBNAME).$(ARB_MAJOR)\";",
+                "ln -sf \"$(ARB_LIB)\" \"libarb.$(ARB_MAJOR).dylib\";"
+        s.gsub! "cp -a $(shell ls $(ARB_LIBNAME)*) \"$(DESTDIR)$(PREFIX)/$(LIBDIR)\";",
+                "cp -a $(shell ls libarb*) \"$(DESTDIR)$(PREFIX)/$(LIBDIR)\";"
+      end
+    end
+
+    ENV.prepend "CFLAGS", "-I#{Formula["flint"].opt_include}/flint"
+    system "./configure", "--prefix=#{prefix}",
+                          "--with-gmp=#{Formula["gmp"].opt_prefix}",
+                          "--with-mpfr=#{Formula["mpfr"].opt_prefix}",
+                          "--with-flint=#{Formula["flint"].opt_prefix}"
     system "make"
-    # Will be enabled once the new stable (with patched tests) is released
-    # see above
-    # system "make", "check" if build.with? "check"
     system "make", "install"
+    system "make", "check" if build.with? "test"
   end
 
   test do

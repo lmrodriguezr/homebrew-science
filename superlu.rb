@@ -1,37 +1,66 @@
 class Superlu < Formula
+  desc "Solve large, sparse nonsymmetric systems of equations"
   homepage "http://crd-legacy.lbl.gov/~xiaoye/SuperLU/"
-  url "http://crd-legacy.lbl.gov/~xiaoye/SuperLU/superlu_4.3.tar.gz"
-  sha1 "d2863610d8c545d250ffd020b8e74dc667d7cbdd"
+  url "http://crd-legacy.lbl.gov/~xiaoye/SuperLU/superlu_5.2.1.tar.gz"
+  sha256 "28fb66d6107ee66248d5cf508c79de03d0621852a0ddeba7301801d3d859f463"
   revision 2
 
   bottle do
     cellar :any
-    sha256 "55c85e1b687b25cd43473499ea977269d9ec40fde4ef42a456ce8b6c5efa7287" => :yosemite
-    sha256 "98be45e96305c0d49578b6d9938eed1dc3df49f4144f44dbe904e5faaebe3159" => :mavericks
-    sha256 "6f4e344d0eb901394e69e88cad6f51d0cf595a9e382f28a8a7cc6b288a2ab8a5" => :mountain_lion
+    sha256 "1f925499746d691d068b422b5fd6465d57774240565bdbcd7d2ccc31e9df2310" => :sierra
+    sha256 "1cc4138decb972d8b961e4f0c3af079885718f98a86895a37fd22e798fdb5501" => :el_capitan
+    sha256 "92f8168ff72f32e7fd9f0d93af62a63720e99ccff68091f6f8d1881d5a80ba18" => :yosemite
+    sha256 "5f68e63705446d53d8dca9b8eb0305696f6ce5a4bd592a32894272770adf90b0" => :x86_64_linux
   end
 
-  option "without-check", "skip build-time tests (not recommended)"
+  deprecated_option "without-check" => "without-test"
+
+  option "with-matlab", "Build MEX files for use with Matlab"
+  option "with-matlab-path=", "Directory that contains MATLAB bin and extern subdirectories"
+
+  option "without-test", "skip build-time tests (not recommended)"
+  option "with-openmp", "Enable OpenMP multithreading"
 
   depends_on :fortran
-  depends_on "openblas" => :optional
+
+  if OS.mac?
+    # Accelerate single precision is buggy and causes certain single precision
+    # tests to fail.
+    depends_on "openblas" => :optional
+    depends_on "veclibfort" if build.without? "openblas"
+  else
+    depends_on "openblas" => :recommended
+    depends_on "tcsh" => :build
+  end
+
+  needs :openmp if build.with? "openmp"
 
   def install
     ENV.deparallelize
     cp "MAKE_INC/make.mac-x", "./make.inc"
-    make_args = ["RANLIB=true", "CC=#{ENV.cc}", "CFLAGS=-fPIC #{ENV.cflags}",
-                 "FORTRAN=#{ENV.fc}", "FFLAGS=#{ENV.fcflags}",
-                 "SuperLUroot=#{buildpath}",
-                 "SUPERLULIB=$(SuperLUroot)/lib/libsuperlu.a",
+    build_args = ["RANLIB=true",
+                  "SuperLUroot=#{buildpath}",
+                  "SUPERLULIB=$(SuperLUroot)/lib/libsuperlu.a"]
+    make_args = ["CC=#{ENV.cc}",
+                 "CFLAGS=-fPIC #{ENV.cflags}",
+                 "FORTRAN=#{ENV.fc}",
+                 "FFLAGS=#{ENV.fcflags}",
                  "NOOPTS=-fPIC"]
 
-    make_args << ((build.with? "openblas") ? "BLASLIB=-L#{Formula["openblas"].opt_lib} -lopenblas" : "BLASLIB=-framework Accelerate")
+    if build.with? "openblas"
+      blas = "-L#{Formula["openblas"].opt_lib} -lopenblas"
+    else
+      blas = OS.mac? ? "-L#{Formula["veclibfort"].opt_lib} -lvecLibFort" : "-lblas"
+    end
+    make_args << "BLASLIB=#{blas}"
+    make_args << ("LOADOPTS=" + ((build.with? "openmp") ? "-fopenmp" : ""))
 
-    system "make", "lib", *make_args
-    if build.with? "check"
-      system "make", "testing", *make_args
+    all_args = build_args + make_args
+    system "make", "lib", *all_args
+    if build.with? "test"
+      system "make", "testing", *all_args
       cd "TESTING" do
-        system "make", *make_args
+        system "make", *all_args
         %w[stest dtest ctest ztest].each do |tst|
           ohai `tail -1 #{tst}.out`.chomp
         end
@@ -39,21 +68,56 @@ class Superlu < Formula
     end
 
     cd "EXAMPLE" do
-      system "make", *make_args
+      system "make", *all_args
+    end
+
+    if build.with? "matlab"
+      matlab = ARGV.value("with-matlab-path") || HOMEBREW_PREFIX
+      cd "MATLAB" do
+        system "make", "MATLAB=#{matlab}", *all_args
+      end
     end
 
     prefix.install "make.inc"
-    File.open(prefix / "make_args.txt", "w") do |f|
-      f.puts(make_args.join(" "))  # Record options passed to make.
+    File.open(prefix/"make_args.txt", "w") do |f|
+      make_args.each do |arg|
+        var, val = arg.split("=", 2)
+        f.puts "#{var}=\"#{val}\"" # Record options passed to make, preserve spaces.
+      end
     end
     lib.install Dir["lib/*"]
-    (include / "superlu").install Dir["SRC/*.h"]
+    (include/"superlu").install Dir["SRC/*.h"]
     doc.install Dir["Doc/*"]
-    (share / "superlu").install Dir["EXAMPLE/*[^.o]"]
+    (pkgshare/"examples").install Dir["EXAMPLE/*[^.o]"]
+    (pkgshare/"matlab").install Dir["MATLAB/*"] if build.with? "matlab"
+  end
+
+  def caveats
+    s = ""
+    if build.with? "matlab"
+      s += <<-EOS.undent
+        Matlab interfaces are located in
+
+          #{opt_pkgshare}/matlab
+      EOS
+    end
+    s
   end
 
   test do
-    cd share / "superlu" do
+    ENV.fortran
+    cp_r pkgshare/"examples", testpath
+    cp prefix/"make.inc", testpath
+    make_args = ["SuperLUroot=#{opt_prefix}",
+                 "SUPERLULIB=#{opt_lib}/libsuperlu.a",
+                 "HEADER=#{opt_include}/superlu"]
+    File.readlines(opt_prefix/"make_args.txt").each do |line|
+      make_args << line.chomp.delete('\\"')
+    end
+
+    cd "examples" do
+      system "make", *make_args
+
       system "./superlu"
       system "./slinsol < g20.rua"
       system "./slinsolx  < g20.rua"
@@ -75,7 +139,7 @@ class Superlu < Formula
       system "./zlinsolx1 < cg20.cua"
       system "./zlinsolx2 < cg20.cua"
 
-      system "./sitersol -h < g20.rua"
+      system "./sitersol -h < g20.rua" # broken with Accelerate
       system "./sitersol1 -h < g20.rua"
       system "./ditersol -h < g20.rua"
       system "./ditersol1 -h < g20.rua"

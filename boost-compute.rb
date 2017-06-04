@@ -1,14 +1,14 @@
 class BoostCompute < Formula
-  desc "A C++ GPU Computing Library for OpenCL"
+  desc "C++ GPU Computing Library for OpenCL"
   homepage "https://boostorg.github.io/compute"
-  url "https://github.com/kylelutz/compute/archive/v0.4.tar.gz"
-  sha256 "d6986155d01a02b12351d6c9cc6c85498292209c3949b3a4628c0712ec7cf01b"
+  url "https://github.com/boostorg/compute/archive/boost-1.64.0.tar.gz"
+  sha256 "75c76789775c2b0a4efee642d174e687146adb03e1206839db74f858ef52b971"
 
   bottle do
-    cellar :any
-    sha256 "ec92f5a55c38b17c928d407bc63322602613789ac4ae821fde03917c18eccf50" => :yosemite
-    sha256 "711ad539e5a83f864691145e407456ba9eb9d4170a06c56ccb724655501d4b9f" => :mavericks
-    sha256 "1acd47a79eb8d1e3349812e307c85b6c21437022faf307876d2fe930cef88c69" => :mountain_lion
+    cellar :any_skip_relocation
+    sha256 "620fc37ea74ffe28dc072082ebd01dfe0c8902c9c6af9d149bc29cac4399cf2d" => :sierra
+    sha256 "9bea896916de83542216bfb6868a33359a7fa94de7b6ba2790f2784e4c7a81e2" => :el_capitan
+    sha256 "9bea896916de83542216bfb6868a33359a7fa94de7b6ba2790f2784e4c7a81e2" => :yosemite
   end
 
   depends_on "cmake" => :build

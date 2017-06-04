@@ -1,18 +1,17 @@
-require "formula"
-
 class GmapGsnap < Formula
+  desc "Genomic Mapping & Alignment Program for RNA/EST/Short-read sequences"
   homepage "http://research-pub.gene.com/gmap/"
-  #doi "10.1093/bioinformatics/btq057"
-  #tag "bioinformatics"
-
-  version "2014-05-15"
+  version "2017-01-14"
   url "http://research-pub.gene.com/gmap/src/gmap-gsnap-#{version}.tar.gz"
-  sha1 "775e427e8747a3348adfc7caecf720bcd6c26f58"
+  sha256 "f3eca0b66ff9770c5965d43b3532e59d839e593de00fa3550141527f3c7f1d2c"
+  # doi "10.1093/bioinformatics/btq057"
+  # tag "bioinformatics"
 
   bottle do
-    sha1 "50861e3482efc2e6dbd301bc006db9ab75656e08" => :yosemite
-    sha1 "37c897f1c50bc3186d468b2e4780b93490c8c1a5" => :mavericks
-    sha1 "4e2c7e4d63d1873714c1d89a0c20ca2c82501e40" => :mountain_lion
+    sha256 "8f3a579e7c037de3423b298be933ddcc33a88cfc2d81279b5e8eb942243cb2e6" => :sierra
+    sha256 "6e4004bd20a29eb92ef7ca79a61de90a1a828a94390d0186d9f824c147066b66" => :el_capitan
+    sha256 "45a1783741299e4ef20326f4d92e1847d036418316616e9f0401712a4d707dcf" => :yosemite
+    sha256 "88934574226f97eb899872d7c7c766c1a42bfb5ede4f2432a40f0ea7cdfdbda2" => :x86_64_linux
   end
 
   depends_on "samtools"
@@ -20,6 +19,7 @@ class GmapGsnap < Formula
   def install
     system "./configure", "--prefix=#{prefix}"
     system "make"
+    ENV.deparallelize
     system "make", "check"
     system "make", "install"
   end

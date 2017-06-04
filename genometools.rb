@@ -3,22 +3,22 @@ class Genometools < Formula
   homepage "http://genometools.org/"
   # doi "10.1109/TCBB.2013.68"
   # tag "bioinformatics"
-  url "http://genometools.org/pub/genometools-1.5.6.tar.gz"
-  sha256 "f0dce0ba75fe7c74c278651c52ec716485bb2dd1cbb197ec38e13f239aace61c"
+  url "http://genometools.org/pub/genometools-1.5.9.tar.gz"
+  sha256 "36923198a4214422886fd1425ef986bd7e558c73b94194982431cfd3dc7eb387"
   head "https://github.com/genometools/genometools.git"
 
   bottle do
     cellar :any
-    revision 2
-    sha256 "4fc4414aab0218b0339e9be0df71819ac848b71a26142722cb8e585143427fbb" => :yosemite
-    sha256 "23b1f6321e853427cef823ae43b3f531bdd3837231229e2cc29790f3a7d4a7c8" => :mavericks
-    sha256 "312b6bc4255448db7ce2953d46400da4aaf3da8a9d20d6dff66bdf5288ec9871" => :mountain_lion
+    sha256 "88728e10c788d91a1fd24b8d754b0c21b6db481339c010a6b0c57f6a7375003b" => :sierra
+    sha256 "159f065b370710aed255ec8af4f0512908fb9814b0b9a0d7c5d9b8d178306c00" => :el_capitan
+    sha256 "9753ed6a87377efb3bd6e824ff2aebffd641cb8991aba133ef43e92d18474b4f" => :yosemite
   end
 
-  option :universal
-  option "with-check", "Run tests which require approximately one hour to run"
+  option "with-test", "Run tests which require approximately one hour to run"
   option "without-pangocairo", "Build without Pango/Cairo (disables AnnotationSketch tool)"
   option "with-hmmer", "Build with HMMER (to enable protein domain search functionality in the ltrdigest tool)"
+
+  deprecated_option "with-check" => "with-test"
 
   depends_on "pkg-config" => :build
   depends_on :python => :recommended unless OS.mac? && MacOS.version >= :lion
@@ -32,11 +32,10 @@ class Genometools < Formula
     args = ["prefix=#{prefix}"]
     args << "cairo=no" if build.without? "pangocairo"
     args << "with-hmmer=yes" if build.with? "hmmer"
-    args << "universal=yes" if build.universal?
     args << "64bit=yes" if MacOS.prefer_64_bit?
 
     system "make", *args
-    system "make", "test", *args if build.with? "check"
+    system "make", "test", *args if build.with? "test"
     system "make", "install", *args
 
     prefix.install bin/"gtdata"

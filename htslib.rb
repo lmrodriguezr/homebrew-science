@@ -1,33 +1,39 @@
 class Htslib < Formula
   desc "C library for high-throughput sequencing data formats"
   homepage "http://www.htslib.org/"
-  # tag "bioinformatics"
-
-  url "https://github.com/samtools/htslib/archive/1.2.1.tar.gz"
-  sha256 "4f67f0fc73ae86f3ed4336d8d8f6da3c12066e9cb5f142b685622dd6b8f9ae42"
+  url "https://github.com/samtools/htslib/releases/download/1.4.1/htslib-1.4.1.tar.bz2"
+  sha256 "85d2dd59ffa614a307d64e9f74a9f999f0912661a8b802ebcc95f537d39933b3"
   head "https://github.com/samtools/htslib.git"
+  revision 1
+  # tag "bioinformatics"
 
   bottle do
     cellar :any
-    revision 1
-    sha256 "427abec04673b9e5ecad88fd4b4af7cc1a835926e7f05bc37f6b564cae59a7da" => :yosemite
-    sha256 "857bf49037bc3caccaf295278e9d895e1b8a5cadf9aeaf1e841211d7d574b681" => :mavericks
-    sha256 "4db40af2120ce5f02cf7377ec43e345659b26f1d735e906cac23f26b83ae67d3" => :mountain_lion
+    sha256 "f3deeb23141c8761e258be68b011ed5e8a51291c45a2ac6bb75b508acdfd0ce4" => :sierra
+    sha256 "b1139910113e0b60cf525f8f30d8172011b2821cc1f7639428de670ab2d3495e" => :el_capitan
+    sha256 "1e8e410fcabeb11246a69260cff45a4b837f8be56b225f999c1676d664cd5a62" => :yosemite
+    sha256 "2ab9f05b510a2957cee05bb20e41dd6e491f378b3048f6a25a572198b0666d03" => :x86_64_linux
   end
 
-  conflicts_with "tabix", :because => "both htslib and tabix install bin/tabix"
+  depends_on "xz"
+  unless OS.mac?
+    depends_on "bzip2"
+    depends_on "zlib"
+    depends_on "curl"
+  end
 
   def install
+    system "./configure", "--enable-libcurl"
     system "make", "install", "prefix=#{prefix}"
-    (share/"htslib").install "test"
+    pkgshare.install "test"
   end
 
   test do
-    sam = share/"htslib/test/ce#1.sam"
-    assert_match "SAM", shell_output("htsfile #{sam}")
-    system "bgzip -c #{sam} > sam.gz"
+    sam = pkgshare/"test/ce#1.sam"
+    assert_match "SAM", shell_output("#{bin}/htsfile #{sam}")
+    system "#{bin}/bgzip -c #{sam} > sam.gz"
     assert File.exist?("sam.gz")
-    system "tabix", "-p", "sam", "sam.gz"
+    system "#{bin}/tabix", "-p", "sam", "sam.gz"
     assert File.exist?("sam.gz.tbi")
   end
 end

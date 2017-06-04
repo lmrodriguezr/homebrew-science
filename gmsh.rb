@@ -1,32 +1,37 @@
-class GmshSvnStrategy < SubversionDownloadStrategy
-  def quiet_safe_system(*args)
-    super *args + ["--username", "gmsh", "--password", "gmsh"]
-  end
-end
-
 class Gmsh < Formula
-  desc "Gmsh is a 3D grid generator with a build-in CAD engine."
-  homepage "http://geuz.org/gmsh"
-  url "http://geuz.org/gmsh/src/gmsh-2.10.0-source.tgz"
-  sha256 "10db05a73bf7f05f6663ddb3b76045ce9decb28b36ad2e54547861254829a860"
-
-  head "https://geuz.org/svn/gmsh/trunk", :using => GmshSvnStrategy
+  desc "3D finite element grid generator with CAD engine"
+  homepage "http://gmsh.info/"
+  url "http://gmsh.info/src/gmsh-3.0.2-source.tgz"
+  sha256 "c0d9fe10f5f65a7b5a364cf9b9c300f42eb6f2c220c7d1ac2cf229deba35189c"
+  head "http://gitlab.onelab.info/gmsh/gmsh.git"
 
   bottle do
     cellar :any
-    sha256 "25927e31f905c130b86c5946aa1b114807847ffe816eb2673966ae926129113d" => :yosemite
-    sha256 "26ee586aa04648b8b2cb593f3b5cd1a437b962154723366d47d5851c4ca10cdf" => :mavericks
-    sha256 "8092c762e97de606106a636dd78f6946fb0beb73cf8cae8db0c082d3be75a3e0" => :mountain_lion
+    sha256 "b273ef985b7ee467095fccd5ceaa344fbe0280e388e3e472c61df5b03b7a323f" => :sierra
+    sha256 "601e111c1d966783cc265fe9116d25f6da8a0a629035111182466dc48e394203" => :el_capitan
+    sha256 "1734c50e025376127ed190415d971fc7e7f03946ad41b17ccec155676e3540f2" => :yosemite
+    sha256 "aa8896e0725e2b45ae6d4084c3a1bd82dfbf59b9d9e58939b762c47cc4978aa0" => :x86_64_linux
   end
+
+  option "with-oce",               "Build with oce support (conflicts with opencascade)"
+  option "with-opencascade",       "Build with opencascade support (conflicts with oce)"
 
   depends_on :fortran
   depends_on :mpi => [:cc, :cxx, :f90, :recommended]
   depends_on "cmake" => :build
+
   depends_on "petsc" => :optional
   depends_on "slepc" => :optional
-  depends_on "opencascade" => :recommended
   depends_on "fltk" => :optional
   depends_on "cairo" if build.with? "fltk"
+  depends_on "openblas" unless OS.mac?
+
+  if build.with?("opencascade") && build.with?("oce")
+    odie "gmsh: switches '--with-opencascade' and '--with-oce' are conflicting."
+  else
+    depends_on "opencascade"      if build.with? "opencascade"
+    depends_on "oce"              if build.with? "oce"
+  end
 
   def install
     # In OS X, gmsh sets default directory locations as if building a
@@ -35,10 +40,13 @@ class Gmsh < Formula
     args = std_cmake_args + ["-DENABLE_OS_SPECIFIC_INSTALL=0",
                              "-DGMSH_BIN=#{bin}",
                              "-DGMSH_LIB=#{lib}",
-                             "-DGMSH_DOC=#{share}/gmsh",
+                             "-DGMSH_DOC=#{pkgshare}/gmsh",
                              "-DGMSH_MAN=#{man}"]
 
-    if build.with? "opencascade"
+    if build.with? "oce"
+      ENV["CASROOT"] = Formula["oce"].opt_prefix
+      args << "-DENABLE_OCC=ON"
+    elsif build.with? "opencascade"
       ENV["CASROOT"] = Formula["opencascade"].opt_prefix
       args << "-DENABLE_OCC=ON"
     else
