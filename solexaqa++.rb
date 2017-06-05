@@ -7,6 +7,8 @@ class Solexaqaxx < Formula
   url "https://downloads.sourceforge.net/project/solexaqa/src/SolexaQA%2B%2B_v3.1.7.1.zip"
   sha256 "b3bdabf955387a4f6176dbdfda1cf03bb869c077b4eec152304f2e76be5f0cf6"
 
+  depends_on "boost" => :build
+
   def install
     cd "source" do
       system "make"
